@@ -1,0 +1,12 @@
+{
+  "name": "lasttro-gestao-pessoal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dashboard de gestao pessoal LASTTRO com frontend e backend local.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: lasttro
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: DATA_DIR
+        value: /var/data
+      - key: HOST
+        value: 0.0.0.0
+    disk:
+      name: lasttro-data
+      mountPath: /var/data
+      sizeGB: 1

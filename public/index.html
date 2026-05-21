@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LASTTRO | Gestao pessoal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="icon" href="/assets/favicon-32.png?v=2" type="image/png" sizes="32x32">
+  <link rel="icon" href="/favicon.ico?v=2" type="image/x-icon" sizes="any">
+  <link rel="shortcut icon" href="/favicon.ico?v=2" type="image/x-icon">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <section class="login-screen" id="loginScreen">
+    <div class="login-panel">
+      <div class="login-brand">
+        <strong>LASTTRO</strong>
+        <span>gestao pessoal</span>
+      </div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-auth-mode="login" type="button">Entrar</button>
+        <button class="auth-tab" data-auth-mode="register" type="button">Criar conta</button>
+        <button class="auth-tab" data-auth-mode="password" type="button">Trocar senha</button>
+      </div>
+      <form id="loginForm" class="login-form">
+        <input name="mode" type="hidden" value="login">
+        <label>Email
+          <input name="email" type="email" autocomplete="email" value="admin@lasttro.local" required>
+        </label>
+        <label>Senha
+          <input name="password" type="password" autocomplete="current-password" placeholder="Digite sua senha" required>
+        </label>
+        <label class="auth-extra hidden" data-auth-extra="newPassword">Nova senha
+          <input name="newPassword" type="password" autocomplete="new-password" placeholder="Minimo 6 caracteres">
+        </label>
+        <label class="auth-extra hidden" data-auth-extra="confirmPassword">Confirmar senha
+          <input name="confirmPassword" type="password" autocomplete="new-password" placeholder="Repita a senha">
+        </label>
+        <p class="form-error" id="loginError"></p>
+        <button class="primary-button" type="submit"><i class="fa-solid fa-right-to-bracket"></i><span>Entrar</span></button>
+        <button class="google-button" id="googleLoginButton" type="button"><i class="fa-brands fa-google"></i><span>Entrar com Google</span></button>
+      </form>
+    </div>
+  </section>
+
+  <div class="app locked" id="appShell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <img class="brand-icon" src="/assets/logotipo.ico" alt="">
+        <div class="brand-copy">
+          <strong>LASTTRO</strong>
+          <span>sistema pessoal</span>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-item active" data-page="overview"><i class="fa-solid fa-grip"></i><span>Visao geral</span></button>
+        <button class="nav-item" data-page="finance"><i class="fa-regular fa-credit-card"></i><span>Financeiro</span></button>
+        <button class="nav-item" data-page="goals"><i class="fa-regular fa-circle-dot"></i><span>Metas</span></button>
+        <button class="nav-item" data-page="work"><i class="fa-solid fa-briefcase"></i><span>Trabalhos</span></button>
+      </nav>
+
+      <button class="sidebar-account" id="accountButton" type="button" title="Conta">
+        <span class="account-avatar"><i class="fa-regular fa-user"></i></span>
+        <span class="account-copy">
+          <strong>Conta</strong>
+          <small id="accountEmail">sem login</small>
+        </span>
+      </button>
+
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Recolher menu">
+        <i class="fa-solid fa-chevron-left"></i>
+      </button>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-button menu-button" id="menuButton" aria-label="Abrir menu">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div>
+          <h1 id="pageTitle">Visao geral</h1>
+          <p id="pageSubtitle">maio de 2026</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="pill-button" id="refreshButton"><i class="fa-solid fa-rotate"></i><span>Atualizar</span></button>
+          <button class="ghost-button" id="logoutButton"><i class="fa-solid fa-arrow-right-from-bracket"></i><span>Sair</span></button>
+        </div>
+      </header>
+
+      <section class="content">
+        <div class="view active" id="view-overview">
+          <section class="cashflow">
+            <div class="section-kicker">Fluxo de caixa</div>
+            <div class="cashflow-grid">
+              <article>
+                <span><i class="fa-solid fa-arrow-up"></i> Entradas</span>
+                <strong class="green" data-summary="entradas">R$0</strong>
+              </article>
+              <article>
+                <span><i class="fa-solid fa-arrow-down"></i> Gastos</span>
+                <strong class="red" data-summary="gastos">R$0</strong>
+              </article>
+              <article>
+                <span><i class="fa-solid fa-equals"></i> Saldo</span>
+                <strong class="yellow" data-summary="saldo">R$0</strong>
+              </article>
+              <article>
+                <span><i class="fa-solid fa-building-columns"></i> Patrimonio</span>
+                <strong data-summary="patrimonio">R$0</strong>
+              </article>
+            </div>
+            <div class="balance-track"><span id="balanceTrack"></span></div>
+          </section>
+
+          <section class="metric-grid">
+            <button class="metric-card" data-go="finance">
+              <span>Receitas</span>
+              <strong data-summary="entradas">R$0</strong>
+              <small>este mes</small>
+            </button>
+            <button class="metric-card" data-go="finance">
+              <span>Despesas</span>
+              <strong class="red" data-summary="gastos">R$0</strong>
+              <small>este mes</small>
+            </button>
+            <button class="metric-card" data-go="goals">
+              <span>Metas ativas</span>
+              <strong data-summary="metasAtivas">0</strong>
+              <small><span data-summary="metasConcluidas">0</span> concluidas</small>
+            </button>
+            <button class="metric-card" data-go="work">
+              <span>Trabalhos</span>
+              <strong data-summary="trabalhosAtivos">0</strong>
+              <small><span data-summary="trabalhosAndamento">0</span> em andamento</small>
+            </button>
+          </section>
+
+          <section class="dashboard-grid">
+            <article class="panel">
+              <div class="panel-title">Gastos por categoria</div>
+              <div class="chart-row">
+                <div class="chart-box"><canvas id="categoryChart"></canvas></div>
+                <div id="categoryLegend" class="legend"></div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-title">Progresso das metas</div>
+              <div id="goalPreview" class="stack"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-title">Ultimas movimentacoes</div>
+              <div id="latestTransactions" class="stack"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-title">Trabalhos ativos</div>
+              <div id="workPreview" class="stack"></div>
+            </article>
+          </section>
+        </div>
+
+        <div class="view" id="view-finance">
+          <section class="section-head">
+            <div>
+              <h2>Financeiro</h2>
+              <p>Movimentacoes, contas, investimentos e seu banco pessoal.</p>
+            </div>
+            <button class="primary-button" id="financePrimaryAction" data-modal="account"><i class="fa-solid fa-credit-card"></i><span>Conta/cartao</span></button>
+          </section>
+
+          <section class="finance-values">
+            <article class="finance-balance-card">
+              <span>Disponivel agora</span>
+              <strong data-summary="disponivelTotal">R$0</strong>
+              <small>contas + dinheiro guardado no Meu banco</small>
+              <div class="value-chip-row">
+                <span>Meu banco <b data-summary="bancoSaldo">R$0</b></span>
+                <span>Contas <b data-summary="contasSaldo">R$0</b></span>
+              </div>
+            </article>
+            <div class="finance-value-grid">
+              <article class="finance-total-card">
+                <span>Fatura dos cartoes</span>
+                <strong class="red" data-summary="cartoesTotal">R$0</strong>
+                <small>valor usado nos cartoes</small>
+              </article>
+              <article class="finance-total-card">
+                <span>Despesas do mes</span>
+                <strong class="red" data-summary="gastos">R$0</strong>
+                <small>saidas registradas</small>
+              </article>
+              <article class="finance-total-card">
+                <span>Investido</span>
+                <strong class="blue" data-summary="carteiraInvestimentos">R$0</strong>
+                <small>carteira separada</small>
+              </article>
+              <article class="finance-total-card">
+                <span>Patrimonio</span>
+                <strong class="yellow" data-summary="patrimonio">R$0</strong>
+                <small>visao consolidada</small>
+              </article>
+            </div>
+          </section>
+
+          <div class="finance-tabs">
+            <button class="finance-tab active" data-finance-tab="cards"><i class="fa-regular fa-credit-card"></i><span>Contas e cartoes</span></button>
+            <button class="finance-tab" data-finance-tab="movements"><i class="fa-solid fa-arrow-right-arrow-left"></i><span>Movimentacoes</span></button>
+            <button class="finance-tab" data-finance-tab="investments"><i class="fa-solid fa-chart-line"></i><span>Investimentos</span></button>
+            <button class="finance-tab" data-finance-tab="bank"><i class="fa-solid fa-building-columns"></i><span>Meu banco</span></button>
+          </div>
+
+          <div class="finance-panel active" id="finance-tab-cards">
+            <div class="list-header">
+              <span>Contas e cartoes</span>
+              <button class="pill-button" data-modal="account"><i class="fa-solid fa-plus"></i><span>Adicionar</span></button>
+            </div>
+            <section class="account-overview" id="accountsOverview"></section>
+            <div class="account-columns">
+              <section>
+                <div class="panel-title">Contas</div>
+                <div id="accountsList" class="account-card-grid"></div>
+              </section>
+              <section>
+                <div class="panel-title">Cartoes</div>
+                <div id="cardsList" class="account-card-grid"></div>
+              </section>
+            </div>
+          </div>
+
+          <div class="finance-panel" id="finance-tab-movements">
+            <section class="finance-insights" id="financeInsights"></section>
+
+            <div class="finance-toolbar">
+              <label class="search-field">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input id="transactionSearch" type="search" placeholder="Buscar por nome ou categoria">
+              </label>
+              <label class="select-field">
+                <span>Ordenar</span>
+                <select id="transactionSort">
+                  <option value="recent">Mais recentes</option>
+                  <option value="value-desc">Maior valor</option>
+                  <option value="value-asc">Menor valor</option>
+                  <option value="name">Nome</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="filter-group">
+              <button class="filter active" data-filter="todos">Todos</button>
+              <button class="filter" data-filter="entrada">Entradas</button>
+              <button class="filter" data-filter="saida">Saidas</button>
+              <button class="filter" data-filter="investimento">Investimentos</button>
+            </div>
+
+            <section class="category-panel">
+              <div class="list-header">
+                <span>Categorias</span>
+                <span id="categoryFilterLabel">Todas</span>
+              </div>
+              <div id="movementCategories" class="category-grid"></div>
+            </section>
+
+            <div class="list-header">
+              <span id="transactionsCount">0 transacoes</span>
+              <span id="transactionsTotal">R$0</span>
+            </div>
+            <div id="transactionsList" class="list"></div>
+          </div>
+
+          <div class="finance-panel" id="finance-tab-investments">
+            <div class="list-header">
+              <span>Carteira de investimentos</span>
+              <button class="pill-button" data-modal="investment"><i class="fa-solid fa-plus"></i><span>Adicionar</span></button>
+            </div>
+            <section class="investment-overview">
+              <div id="investmentHero" class="investment-hero"></div>
+              <article class="investment-chart-panel">
+                <div class="panel-title">Distribuicao por tipo</div>
+                <div class="investment-chart-wrap"><canvas id="investmentTypeChart"></canvas></div>
+                <div id="investmentTypeLegend" class="legend"></div>
+              </article>
+              <article class="investment-chart-panel">
+                <div class="panel-title">Maiores posicoes</div>
+                <div class="investment-bar-list" id="investmentBars"></div>
+              </article>
+            </section>
+            <div id="investmentsList" class="investment-grid"></div>
+          </div>
+
+          <div class="finance-panel" id="finance-tab-bank">
+            <section class="bank-hero">
+              <div>
+                <span>Meu banco</span>
+                <strong id="bankBalance">R$0</strong>
+                <small>Retiradas precisam ser devolvidas com 4% de juros.</small>
+              </div>
+              <div class="bank-actions">
+                <button class="primary-button" data-modal="bankDeposit"><i class="fa-solid fa-arrow-down"></i><span>Guardar</span></button>
+                <button class="pill-button" data-modal="bankWithdraw"><i class="fa-solid fa-arrow-up"></i><span>Retirar</span></button>
+              </div>
+            </section>
+            <div class="list-header">
+              <span>Retiradas e devolucoes</span>
+              <span id="bankOpenTotal">R$0 em aberto</span>
+            </div>
+            <div id="bankWithdrawalsList" class="list"></div>
+          </div>
+        </div>
+
+        <div class="view" id="view-goals">
+          <section class="section-head">
+            <div>
+              <h2>Metas</h2>
+              <p>Acompanhe objetivos, prazos e valor acumulado.</p>
+            </div>
+            <button class="primary-button" data-modal="goal"><i class="fa-solid fa-plus"></i><span>Meta</span></button>
+          </section>
+          <section class="goals-overview" id="goalsOverview"></section>
+          <div id="goalsList" class="list"></div>
+        </div>
+
+        <div class="view" id="view-work">
+          <section class="section-head">
+            <div>
+              <h2>Trabalhos</h2>
+              <p>Controle renda, horas, status e valor por hora.</p>
+            </div>
+            <button class="primary-button" data-modal="work"><i class="fa-solid fa-plus"></i><span>Trabalho</span></button>
+          </section>
+          <section class="work-overview" id="workOverview"></section>
+          <section class="work-board">
+            <article>
+              <div class="panel-title">Ativos</div>
+              <div id="activeWorkList" class="work-card-grid"></div>
+            </article>
+            <article>
+              <div class="panel-title">Em andamento</div>
+              <div id="pendingWorkList" class="work-card-grid"></div>
+            </article>
+            <article>
+              <div class="panel-title">Concluidos</div>
+              <div id="doneWorkList" class="work-card-grid"></div>
+            </article>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+
+  <dialog id="entityDialog">
+    <form method="dialog" id="entityForm">
+      <div class="dialog-head">
+        <h3 id="dialogTitle">Adicionar</h3>
+        <button class="icon-button" value="cancel" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="formFields" class="form-grid"></div>
+      <div class="dialog-actions">
+        <button class="ghost-button" value="cancel">Cancelar</button>
+        <button class="primary-button" value="default"><i class="fa-solid fa-check"></i><span>Salvar</span></button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/app.js"></script>
+</body>
+</html>
