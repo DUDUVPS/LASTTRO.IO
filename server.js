@@ -52,7 +52,6 @@ const initialData = {
 };
 
 const sessions = new Map();
-const oauthStates = new Set();
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -181,6 +180,30 @@ function createSession(email) {
 function getBaseUrl(req) {
   const proto = req.headers['x-forwarded-proto'] || (req.socket.encrypted ? 'https' : 'http');
   return `${proto}://${req.headers.host}`;
+}
+
+function signValue(value) {
+  const secret = GOOGLE_CLIENT_SECRET || 'lasttro-dev-secret';
+  return crypto.createHmac('sha256', secret).update(value).digest('base64url');
+}
+
+function createOauthState() {
+  const payload = Buffer.from(JSON.stringify({
+    nonce: crypto.randomUUID(),
+    createdAt: Date.now()
+  })).toString('base64url');
+  return `${payload}.${signValue(payload)}`;
+}
+
+function verifyOauthState(state) {
+  const [payload, signature] = String(state || '').split('.');
+  if (!payload || !signature || signature !== signValue(payload)) return false;
+  try {
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    return Date.now() - Number(data.createdAt || 0) < 10 * 60 * 1000;
+  } catch {
+    return false;
+  }
 }
 
 function sendHtml(res, status, html) {
@@ -378,8 +401,7 @@ async function handleApi(req, res, pathname) {
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
       return send(res, 500, { error: 'Google OAuth nao configurado no servidor' });
     }
-    const state = crypto.randomUUID();
-    oauthStates.add(state);
+    const state = createOauthState();
     const redirectUri = `${getBaseUrl(req)}/api/auth/google/callback`;
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     url.searchParams.set('client_id', GOOGLE_CLIENT_ID);
@@ -396,10 +418,9 @@ async function handleApi(req, res, pathname) {
     const callbackUrl = new URL(req.url, getBaseUrl(req));
     const code = callbackUrl.searchParams.get('code');
     const state = callbackUrl.searchParams.get('state');
-    if (!code || !state || !oauthStates.has(state)) {
+    if (!code || !verifyOauthState(state)) {
       return sendHtml(res, 400, 'Login Google invalido.');
     }
-    oauthStates.delete(state);
 
     const redirectUri = `${getBaseUrl(req)}/api/auth/google/callback`;
     const tokenPayload = await postForm('https://oauth2.googleapis.com/token', {
