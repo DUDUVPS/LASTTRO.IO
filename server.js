@@ -2,6 +2,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 const crypto = require('crypto');
+const querystring = require('querystring');
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -9,6 +10,8 @@ const ROOT = __dirname;
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const DATA_DIR = process.env.DATA_DIR || path.join(ROOT, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 
 const initialData = {
   transacoes: [
@@ -49,6 +52,7 @@ const initialData = {
 };
 
 const sessions = new Map();
+const oauthStates = new Set();
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -166,6 +170,57 @@ function normalizeAuth(auth = {}) {
 
 function publicUser(user) {
   return { email: user.email, username: user.email };
+}
+
+function createSession(email) {
+  const token = crypto.randomUUID();
+  sessions.set(token, email);
+  return token;
+}
+
+function getBaseUrl(req) {
+  const proto = req.headers['x-forwarded-proto'] || (req.socket.encrypted ? 'https' : 'http');
+  return `${proto}://${req.headers.host}`;
+}
+
+function sendHtml(res, status, html) {
+  return send(res, status, html, 'text/html; charset=utf-8');
+}
+
+async function postForm(url, data) {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: querystring.stringify(data)
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error_description || payload.error || 'Falha no Google OAuth');
+  return payload;
+}
+
+async function getGoogleProfile(accessToken) {
+  const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error_description || payload.error || 'Falha ao buscar perfil Google');
+  return payload;
+}
+
+function googleCallbackHtml(payload) {
+  const json = JSON.stringify(payload).replace(/</g, '\\u003c');
+  return `<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>LASTTRO</title></head>
+<body>
+  <script>
+    const payload = ${json};
+    localStorage.setItem('lasttroToken', payload.token);
+    localStorage.setItem('lasttroUser', JSON.stringify(payload.user));
+    location.replace('/');
+  </script>
+</body>
+</html>`;
 }
 
 function normalizeTransaction(item) {
@@ -319,13 +374,63 @@ async function handleApi(req, res, pathname) {
   const db = await readDb();
   const collection = pathname.split('/')[2];
 
+  if (req.method === 'GET' && pathname === '/api/auth/google') {
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+      return send(res, 500, { error: 'Google OAuth nao configurado no servidor' });
+    }
+    const state = crypto.randomUUID();
+    oauthStates.add(state);
+    const redirectUri = `${getBaseUrl(req)}/api/auth/google/callback`;
+    const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+    url.searchParams.set('client_id', GOOGLE_CLIENT_ID);
+    url.searchParams.set('redirect_uri', redirectUri);
+    url.searchParams.set('response_type', 'code');
+    url.searchParams.set('scope', 'openid email profile');
+    url.searchParams.set('state', state);
+    url.searchParams.set('prompt', 'select_account');
+    res.writeHead(302, { Location: url.toString() });
+    return res.end();
+  }
+
+  if (req.method === 'GET' && pathname === '/api/auth/google/callback') {
+    const callbackUrl = new URL(req.url, getBaseUrl(req));
+    const code = callbackUrl.searchParams.get('code');
+    const state = callbackUrl.searchParams.get('state');
+    if (!code || !state || !oauthStates.has(state)) {
+      return sendHtml(res, 400, 'Login Google invalido.');
+    }
+    oauthStates.delete(state);
+
+    const redirectUri = `${getBaseUrl(req)}/api/auth/google/callback`;
+    const tokenPayload = await postForm('https://oauth2.googleapis.com/token', {
+      code,
+      client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code'
+    });
+    const profile = await getGoogleProfile(tokenPayload.access_token);
+    const email = normalizeEmail(profile.email);
+    if (!email || profile.email_verified === false) return sendHtml(res, 401, 'Email Google nao verificado.');
+
+    let user = db.auth.users.find(item => item.email === email);
+    if (!user) {
+      user = { email, username: email, passwordHash: `google:${profile.sub || crypto.randomUUID()}` };
+      db.auth.users.push(user);
+      db.accountsData[email] = blankUserData();
+      await writeDb(db);
+    }
+
+    const token = createSession(user.email);
+    return sendHtml(res, 200, googleCallbackHtml({ token, user: publicUser(user) }));
+  }
+
   if (req.method === 'POST' && pathname === '/api/login') {
     const body = await readBody(req);
     const email = normalizeEmail(body.email || body.username);
     const user = db.auth.users.find(item => item.email === email);
     if (user && hashPassword(body.password) === user.passwordHash) {
-      const token = crypto.randomUUID();
-      sessions.set(token, user.email);
+      const token = createSession(user.email);
       return send(res, 200, { token, user: publicUser(user) });
     }
     return send(res, 401, { error: 'Email ou senha invalidos' });
@@ -344,13 +449,12 @@ async function handleApi(req, res, pathname) {
     db.auth.users.push(user);
     db.accountsData[email] = blankUserData();
     await writeDb(db);
-    const token = crypto.randomUUID();
-    sessions.set(token, user.email);
+    const token = createSession(user.email);
     return send(res, 201, { token, user: publicUser(user) });
   }
 
   if (req.method === 'POST' && pathname === '/api/google-login') {
-    return send(res, 501, { error: 'Login com Google precisa de configuracao OAuth' });
+    return send(res, 200, { url: '/api/auth/google' });
   }
 
   if (req.method === 'POST' && pathname === '/api/logout') {

@@ -205,11 +205,7 @@ function safeApiError(message) {
 
 async function loginWithGoogle() {
   setAuthMessage('');
-  try {
-    await api('/api/google-login', { method: 'POST', body: JSON.stringify({}) });
-  } catch (error) {
-    setAuthMessage('Google ainda precisa ser configurado com OAuth. O botao ja ficou preparado aqui.');
-  }
+  window.location.href = '/api/auth/google';
 }
 
 async function logout() {
