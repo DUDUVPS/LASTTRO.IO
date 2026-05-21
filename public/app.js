@@ -120,7 +120,7 @@ function setAuthMode(mode) {
   const form = qs('#loginForm');
   form.reset();
   form.elements.mode.value = mode;
-  form.elements.email.value = mode === 'login' ? 'admin@lasttro.local' : '';
+  form.elements.email.value = '';
   qsa('.auth-tab').forEach(button => button.classList.toggle('active', button.dataset.authMode === mode));
   qsa('[data-auth-extra]').forEach(field => {
     const name = field.dataset.authExtra;
