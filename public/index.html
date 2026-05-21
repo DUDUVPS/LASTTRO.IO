@@ -26,10 +26,10 @@
         <button class="auth-tab" data-auth-mode="register" type="button">Criar conta</button>
         <button class="auth-tab" data-auth-mode="password" type="button">Trocar senha</button>
       </div>
-      <form id="loginForm" class="login-form">
+      <form id="loginForm" class="login-form" autocomplete="off">
         <input name="mode" type="hidden" value="login">
         <label>Email
-          <input name="email" type="email" autocomplete="email" placeholder="seu@email.com" required>
+          <input name="email" type="email" autocomplete="off" placeholder="seu@email.com" required>
         </label>
         <label>Senha
           <input name="password" type="password" autocomplete="current-password" placeholder="Digite sua senha" required>

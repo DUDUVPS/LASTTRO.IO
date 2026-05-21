@@ -100,6 +100,11 @@ function clearSession() {
 function showLogin(message = '') {
   qs('#loginScreen').classList.remove('hidden');
   qs('#appShell').classList.add('locked');
+  const form = qs('#loginForm');
+  if (form && state.authMode === 'login') {
+    form.elements.email.value = '';
+    form.elements.password.value = '';
+  }
   setAuthMessage(message);
 }
 
