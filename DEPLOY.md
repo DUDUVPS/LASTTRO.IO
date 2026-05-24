@@ -1,5 +1,29 @@
 # Deploy remoto do LASTTRO
 
+## Railway recomendado
+
+1. Suba este projeto para um repositorio no GitHub.
+2. Entre em https://railway.com e crie um projeto pelo GitHub.
+3. Selecione o repositorio do LASTTRO.
+4. Em **Variables**, adicione:
+
+```text
+HOST=0.0.0.0
+DATA_DIR=/data
+GOOGLE_CLIENT_ID=seu_client_id_google
+GOOGLE_CLIENT_SECRET=seu_client_secret_google
+```
+
+5. Em **Volumes**, crie um volume persistente e monte em:
+
+```text
+/data
+```
+
+Sem esse volume, os dados podem sumir a cada redeploy.
+
+6. O Railway vai usar `railway.json` e `package.json` para iniciar o app.
+
 ## Render
 
 1. Suba este projeto para um repositorio no GitHub.

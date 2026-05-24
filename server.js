@@ -397,6 +397,10 @@ async function handleApi(req, res, pathname) {
   const db = await readDb();
   const collection = pathname.split('/')[2];
 
+  if (req.method === 'GET' && pathname === '/api/health') {
+    return send(res, 200, { ok: true, service: 'lasttro' });
+  }
+
   if (req.method === 'GET' && pathname === '/api/auth/google') {
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
       return send(res, 500, { error: 'Google OAuth nao configurado no servidor' });
