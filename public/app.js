@@ -380,7 +380,7 @@ function categoryChipTemplate(item, index) {
 
 function renderFinancePrimaryAction() {
   const actions = {
-    account: { modal: 'account', label: 'Conta/cartao', icon: 'fa-credit-card' },
+    account: { modal: 'account', label: 'Banco', icon: 'fa-credit-card' },
     movements: { modal: 'transaction', label: 'Transacao', icon: 'fa-plus' },
     investments: { modal: 'investment', label: 'Investimento', icon: 'fa-chart-line' },
     bank: { modal: 'bankDeposit', label: 'Guardar', icon: 'fa-arrow-down' },
@@ -678,6 +678,25 @@ function buildAccountGroups(accounts, cards) {
   return groups;
 }
 
+function findRelatedAccountParts(item) {
+  const items = state.data.contasCartoes || [];
+  const accounts = items.filter(entry => entry.tipo === 'conta');
+  const cards = items.filter(entry => entry.tipo === 'cartao');
+
+  if (!item) return { account: null, card: null };
+  if (item.tipo === 'conta') {
+    const group = buildAccountGroups([item], cards)[0];
+    return { account: item, card: group?.cards?.[0] || null };
+  }
+
+  const cardKey = accountKey(item);
+  const account = accounts.find(entry => {
+    const key = accountKey(entry);
+    return key && cardKey && (key.includes(cardKey) || cardKey.includes(key));
+  }) || null;
+  return { account, card: item };
+}
+
 function accountGroupTemplate(group) {
   const account = group.account;
   const cards = group.cards || [];
@@ -700,8 +719,7 @@ function accountGroupTemplate(group) {
           <small>${escapeHtml(detail)}</small>
         </div>
         <div class="bank-card-actions">
-          ${account ? `<button class="delete-button" data-edit-account="${account.id}" aria-label="Editar conta"><i class="fa-regular fa-pen-to-square"></i></button>` : ''}
-          ${mainCard ? `<button class="delete-button" data-edit-account="${mainCard.id}" aria-label="Editar cartao"><i class="fa-solid fa-credit-card"></i></button>` : ''}
+          <button class="delete-button" data-edit-account="${(account || mainCard)?.id || ''}" aria-label="Editar banco"><i class="fa-regular fa-pen-to-square"></i></button>
           <button class="delete-button" data-delete="contas-cartoes" data-id="${ids[0]?.id || ''}" aria-label="Excluir item"><i class="fa-regular fa-trash-can"></i></button>
         </div>
       </div>
@@ -892,16 +910,21 @@ function openModal(type, editItem = null) {
   }
 
   if (type === 'account') {
-    const item = editItem || {};
-    title.textContent = editItem ? 'Editar conta ou cartao' : 'Nova conta ou cartao';
+    const { account, card } = findRelatedAccountParts(editItem);
+    const bankName = account?.nome || card?.nome?.replace(/\s*credito$/i, '') || '';
+    const bankLabel = account?.bandeira || card?.bandeira || bankName;
+    state.editing = editItem ? { type, accountId: account?.id || null, cardId: card?.id || null } : null;
+    title.textContent = editItem ? 'Editar banco' : 'Novo banco';
     fields.innerHTML = `
-      ${field('nome', 'Nome', 'text', item.nome || 'Ex: Nubank', true)}
-      <label>Tipo<select name="tipo"><option value="cartao" ${item.tipo === 'cartao' ? 'selected' : ''}>Cartao</option><option value="conta" ${item.tipo === 'conta' ? 'selected' : ''}>Conta</option></select></label>
-      ${field('bandeira', 'Banco ou bandeira', 'text', item.bandeira || 'Mastercard', false)}
-      ${field('saldo', 'Saldo da conta', 'number', item.saldo ?? '0', false)}
-      ${field('limite', 'Limite do cartao', 'number', item.limite ?? '0', false)}
-      ${field('usado', 'Valor usado no cartao', 'number', item.usado ?? '0', false)}
-      ${field('vencimento', 'Vencimento', 'number', item.vencimento ?? '1', false)}
+      <div class="form-section-title">Banco</div>
+      ${field('nome', 'Nome do banco', 'text', bankName || 'Ex: Nubank', true)}
+      ${field('bandeira', 'Identificacao', 'text', bankLabel || 'Ex: Conta principal', false)}
+      <div class="form-section-title">Debito</div>
+      ${field('saldo', 'Saldo', 'number', account?.saldo ?? '0', false)}
+      <div class="form-section-title">Credito</div>
+      ${field('limite', 'Limite', 'number', card?.limite ?? '0', false)}
+      ${field('usado', 'Fatura atual', 'number', card?.usado ?? '0', false)}
+      ${field('vencimento', 'Vencimento', 'number', card?.vencimento ?? '1', false)}
     `;
   }
 
@@ -945,7 +968,7 @@ function field(name, label, type, value, required) {
   const inputType = type === 'number' && decimalFields.includes(name) ? 'text' : type;
   const decimalAttrs = inputType === 'text' && decimalFields.includes(name) ? ' inputmode="decimal"' : '';
   const step = type === 'number' && inputType === 'number' ? ' step="1"' : '';
-  return `<label>${label}<input name="${name}" type="${inputType}" value="${value}"${decimalAttrs}${step} ${required ? 'required' : ''}></label>`;
+  return `<label>${label}<input name="${name}" type="${inputType}" value="${escapeHtml(value)}"${decimalAttrs}${step} ${required ? 'required' : ''}></label>`;
 }
 
 async function submitModal(event) {
@@ -956,6 +979,13 @@ async function submitModal(event) {
 
   const data = Object.fromEntries(new FormData(form).entries());
   normalizeFormNumbers(data);
+  if (state.modalType === 'account') {
+    await submitBankAccount(data);
+    state.editing = null;
+    qs('#entityDialog').close();
+    await loadDashboard();
+    return;
+  }
   const paths = {
     transaction: '/api/transacoes',
     goal: '/api/metas',
@@ -978,6 +1008,45 @@ async function submitModal(event) {
   state.editing = null;
   qs('#entityDialog').close();
   await loadDashboard();
+}
+
+async function submitBankAccount(data) {
+  const editing = state.editing || {};
+  const nome = String(data.nome || 'Novo banco').trim();
+  const bandeira = String(data.bandeira || nome).trim();
+  const accountPayload = {
+    nome,
+    tipo: 'conta',
+    bandeira,
+    saldo: data.saldo || 0,
+    limite: 0,
+    usado: 0,
+    vencimento: 1
+  };
+  const cardPayload = {
+    nome: `${nome} credito`,
+    tipo: 'cartao',
+    bandeira,
+    saldo: 0,
+    limite: data.limite || 0,
+    usado: data.usado || 0,
+    vencimento: data.vencimento || 1
+  };
+
+  const accountPath = editing.accountId ? `/api/contas-cartoes/${editing.accountId}` : '/api/contas-cartoes';
+  await api(accountPath, {
+    method: editing.accountId ? 'PUT' : 'POST',
+    body: JSON.stringify(accountPayload)
+  });
+
+  const hasCredit = Number(cardPayload.limite || 0) > 0 || Number(cardPayload.usado || 0) > 0 || editing.cardId;
+  if (!hasCredit) return;
+
+  const cardPath = editing.cardId ? `/api/contas-cartoes/${editing.cardId}` : '/api/contas-cartoes';
+  await api(cardPath, {
+    method: editing.cardId ? 'PUT' : 'POST',
+    body: JSON.stringify(cardPayload)
+  });
 }
 
 function normalizeFormNumbers(data) {
