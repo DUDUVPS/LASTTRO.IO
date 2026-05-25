@@ -358,8 +358,10 @@ function getUserData(db, email) {
 }
 
 function normalizeAccountCard(item) {
+  const groupId = String(item.groupId || '').trim();
   return {
     id: item.id || crypto.randomUUID(),
+    groupId: groupId || item.id || crypto.randomUUID(),
     nome: String(item.nome || 'Nova conta').trim(),
     tipo: ['conta', 'cartao'].includes(item.tipo) ? item.tipo : 'cartao',
     bandeira: String(item.bandeira || 'Nao informado').trim(),

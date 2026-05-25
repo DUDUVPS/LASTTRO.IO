@@ -696,16 +696,20 @@ function accountKey(item) {
     .replace(/[^a-z0-9]/g, '');
 }
 
+function newGroupId() {
+  return window.crypto?.randomUUID ? window.crypto.randomUUID() : `bank-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 function buildAccountGroups(accounts, cards) {
   const usedCards = new Set();
   const groups = accounts.map(account => {
     const key = accountKey(account);
     const relatedCards = cards.filter(card => {
+      const sameGroup = account.groupId && card.groupId && account.groupId === card.groupId;
       const cardKey = accountKey(card);
-      const sameBank = key && cardKey && (key.includes(cardKey) || cardKey.includes(key));
-      const sameName = String(card.nome || '').toLowerCase().includes(String(account.nome || '').toLowerCase());
-      if (sameBank || sameName) usedCards.add(card.id);
-      return sameBank || sameName;
+      const sameBank = key && cardKey && key === cardKey;
+      if (sameGroup || sameBank) usedCards.add(card.id);
+      return sameGroup || sameBank;
     });
     return { account, cards: relatedCards };
   });
@@ -730,8 +734,9 @@ function findRelatedAccountParts(item) {
 
   const cardKey = accountKey(item);
   const account = accounts.find(entry => {
+    if (entry.groupId && item.groupId && entry.groupId === item.groupId) return true;
     const key = accountKey(entry);
-    return key && cardKey && (key.includes(cardKey) || cardKey.includes(key));
+    return key && cardKey && key === cardKey;
   }) || null;
   return { account, card: item };
 }
@@ -749,6 +754,7 @@ function accountGroupTemplate(group) {
   const detail = account ? account.bandeira : mainCard?.bandeira || 'Cartao de credito';
   const ids = [account, ...cards].filter(Boolean);
   const today = new Date().toLocaleDateString('pt-BR');
+  const editId = account?.id || mainCard?.id || '';
   return `
     <article class="bank-account-card ${cards.length ? 'has-credit' : 'debit-only'}">
       <div class="bank-account-top">
@@ -758,7 +764,7 @@ function accountGroupTemplate(group) {
           <small>${escapeHtml(detail)}</small>
         </div>
         <div class="bank-card-actions">
-          <button class="delete-button" data-edit-account="${(account || mainCard)?.id || ''}" aria-label="Editar banco"><i class="fa-regular fa-pen-to-square"></i></button>
+          <button class="delete-button" data-edit-account="${editId}" aria-label="Editar banco"><i class="fa-regular fa-pen-to-square"></i></button>
           <button class="delete-button" data-delete="contas-cartoes" data-id="${ids[0]?.id || ''}" aria-label="Excluir item"><i class="fa-regular fa-trash-can"></i></button>
         </div>
       </div>
@@ -952,7 +958,8 @@ function openModal(type, editItem = null) {
     const { account, card } = findRelatedAccountParts(editItem);
     const bankName = account?.nome || card?.nome?.replace(/\s*credito$/i, '') || '';
     const bankLabel = account?.bandeira || card?.bandeira || bankName;
-    state.editing = editItem ? { type, accountId: account?.id || null, cardId: card?.id || null } : null;
+    const groupId = account?.groupId || card?.groupId || editItem?.groupId || newGroupId();
+    state.editing = { type, accountId: account?.id || null, cardId: card?.id || null, groupId };
     title.textContent = editItem ? 'Editar banco' : 'Novo banco';
     fields.innerHTML = `
       <div class="form-section-title">Banco</div>
@@ -1053,7 +1060,9 @@ async function submitBankAccount(data) {
   const editing = state.editing || {};
   const nome = String(data.nome || 'Novo banco').trim();
   const bandeira = String(data.bandeira || nome).trim();
+  const groupId = editing.groupId || newGroupId();
   const accountPayload = {
+    groupId,
     nome,
     tipo: 'conta',
     bandeira,
@@ -1063,6 +1072,7 @@ async function submitBankAccount(data) {
     vencimento: 1
   };
   const cardPayload = {
+    groupId,
     nome: `${nome} credito`,
     tipo: 'cartao',
     bandeira,
