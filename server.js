@@ -183,12 +183,14 @@ function normalizeEmail(value) {
 
 function parseDecimal(value, fallback = 0) {
   if (typeof value === 'number') return Number.isFinite(value) ? value : fallback;
-  const normalized = String(value ?? '')
-    .trim()
-    .replace(/\./g, '')
-    .replace(',', '.');
+  const raw = String(value ?? '').trim();
+  const normalized = raw.includes(',') ? raw.replace(/\./g, '').replace(',', '.') : raw;
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function moneyValue(value, fallback = 0) {
+  return Number(parseDecimal(value, fallback).toFixed(2));
 }
 
 function isValidEmail(value) {
@@ -299,7 +301,7 @@ function googleCallbackHtml(payload) {
 
 function normalizeTransaction(item) {
   const tipo = ['entrada', 'saida', 'investimento'].includes(item.tipo) ? item.tipo : 'saida';
-  const rawVal = parseDecimal(item.val);
+  const rawVal = moneyValue(item.val);
   const val = tipo === 'saida' ? -Math.abs(rawVal) : Math.abs(rawVal);
   return {
     id: item.id || crypto.randomUUID(),
@@ -340,10 +342,10 @@ function normalizeUserData(data = {}) {
     metas: data.metas || [],
     trabalhos: data.trabalhos || [],
     contasCartoes: (data.contasCartoes || []).map(normalizeAccountCard),
-    investimentosCarteira: data.investimentosCarteira || [],
+    investimentosCarteira: (data.investimentosCarteira || []).map(normalizeInvestment),
     banco: {
-      saldo: parseDecimal(data.banco?.saldo),
-      retiradas: data.banco?.retiradas || []
+      saldo: moneyValue(data.banco?.saldo),
+      retiradas: (data.banco?.retiradas || []).map(normalizeWithdrawal)
     }
   };
 }
@@ -361,9 +363,9 @@ function normalizeAccountCard(item) {
     nome: String(item.nome || 'Nova conta').trim(),
     tipo: ['conta', 'cartao'].includes(item.tipo) ? item.tipo : 'cartao',
     bandeira: String(item.bandeira || 'Nao informado').trim(),
-    saldo: parseDecimal(item.saldo),
-    limite: parseDecimal(item.limite),
-    usado: parseDecimal(item.usado),
+    saldo: moneyValue(item.saldo),
+    limite: moneyValue(item.limite),
+    usado: moneyValue(item.usado),
     vencimento: parseDecimal(item.vencimento, 1)
   };
 }
@@ -372,10 +374,34 @@ function normalizeGoal(item) {
   return {
     id: item.id || crypto.randomUUID(),
     nome: String(item.nome || 'Nova meta').trim(),
-    target: parseDecimal(item.target),
-    atual: parseDecimal(item.atual),
+    target: moneyValue(item.target),
+    atual: moneyValue(item.atual),
     cor: item.cor || '#4a9eff',
     deadline: item.deadline || 'Sem prazo'
+  };
+}
+
+function normalizeInvestment(item) {
+  return {
+    id: item.id || crypto.randomUUID(),
+    nome: String(item.nome || 'Novo investimento').trim(),
+    tipo: String(item.tipo || 'Renda fixa').trim(),
+    valor: moneyValue(item.valor),
+    rendimento: parseDecimal(item.rendimento),
+    data: item.data || new Date().toISOString().slice(0, 10)
+  };
+}
+
+function normalizeWithdrawal(item) {
+  const valor = moneyValue(item.valor);
+  return {
+    ...item,
+    id: item.id || crypto.randomUUID(),
+    valor,
+    juros: moneyValue(item.juros ?? valor * 0.04),
+    totalDevolver: moneyValue(item.totalDevolver ?? valor * 1.04),
+    data: item.data || new Date().toISOString().slice(0, 10),
+    status: item.status === 'devolvido' ? 'devolvido' : 'aberto'
   };
 }
 
@@ -385,7 +411,7 @@ function normalizeWork(item) {
     nome: String(item.nome || 'Novo trabalho').trim(),
     tipo: String(item.tipo || 'Freelancer').trim(),
     status: ['ativo', 'andamento', 'concluido'].includes(item.status) ? item.status : 'andamento',
-    salario: parseDecimal(item.salario),
+    salario: moneyValue(item.salario),
     horas: parseDecimal(item.horas, 1),
     inicio: item.inicio || new Date().toISOString().slice(0, 10)
   };
@@ -605,15 +631,7 @@ async function handleApi(req, res, pathname) {
   }
 
   if (req.method === 'POST' && collection === 'investimentos') {
-    const body = await readBody(req);
-    const created = {
-      id: crypto.randomUUID(),
-      nome: String(body.nome || 'Novo investimento').trim(),
-      tipo: String(body.tipo || 'Renda fixa').trim(),
-      valor: parseDecimal(body.valor),
-      rendimento: parseDecimal(body.rendimento),
-      data: body.data || new Date().toISOString().slice(0, 10)
-    };
+    const created = normalizeInvestment(await readBody(req));
     data.investimentosCarteira.unshift(created);
     await writeDb(db);
     return send(res, 201, created);
@@ -621,17 +639,17 @@ async function handleApi(req, res, pathname) {
 
   if (req.method === 'POST' && pathname === '/api/banco/depositar') {
     const body = await readBody(req);
-    const valor = Math.max(0, parseDecimal(body.valor));
-    data.banco.saldo += valor;
+    const valor = Math.max(0, moneyValue(body.valor));
+    data.banco.saldo = moneyValue(data.banco.saldo + valor);
     await writeDb(db);
     return send(res, 201, data.banco);
   }
 
   if (req.method === 'POST' && pathname === '/api/banco/retirar') {
     const body = await readBody(req);
-    const valor = Math.max(0, parseDecimal(body.valor));
+    const valor = Math.max(0, moneyValue(body.valor));
     if (valor <= 0) return send(res, 400, { error: 'Valor invalido' });
-    if (valor > data.banco.saldo) return send(res, 400, { error: 'Saldo insuficiente no Meu Banco' });
+    if (valor > data.banco.saldo) return send(res, 400, { error: 'Saldo insuficiente no Dudu Bank' });
     const retirada = {
       id: crypto.randomUUID(),
       valor,
@@ -640,7 +658,7 @@ async function handleApi(req, res, pathname) {
       data: new Date().toISOString().slice(0, 10),
       status: 'aberto'
     };
-    data.banco.saldo -= valor;
+    data.banco.saldo = moneyValue(data.banco.saldo - valor);
     data.banco.retiradas.unshift(retirada);
     await writeDb(db);
     return send(res, 201, retirada);
@@ -653,7 +671,7 @@ async function handleApi(req, res, pathname) {
     if (retirada.status !== 'aberto') return send(res, 400, { error: 'Retirada ja devolvida' });
     retirada.status = 'devolvido';
     retirada.dataDevolucao = new Date().toISOString().slice(0, 10);
-    data.banco.saldo += Number(retirada.totalDevolver || 0);
+    data.banco.saldo = moneyValue(data.banco.saldo + moneyValue(retirada.totalDevolver));
     await writeDb(db);
     return send(res, 200, retirada);
   }

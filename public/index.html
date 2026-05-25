@@ -179,9 +179,9 @@
             <article class="finance-balance-card">
               <span>Disponivel agora</span>
               <strong data-summary="disponivelTotal">R$0</strong>
-              <small>contas + dinheiro guardado no Meu banco</small>
+              <small>contas + dinheiro guardado no Dudu Bank</small>
               <div class="value-chip-row">
-                <span>Meu banco <b data-summary="bancoSaldo">R$0</b></span>
+                <span>Dudu Bank <b data-summary="bancoSaldo">R$0</b></span>
                 <span>Contas <b data-summary="contasSaldo">R$0</b></span>
               </div>
             </article>
@@ -217,21 +217,29 @@
 
           <div class="finance-panel active" id="finance-tab-cards">
             <div class="list-header">
-              <span>Contas e cartoes</span>
+              <span>Carteira financeira</span>
               <button class="pill-button" data-modal="account"><i class="fa-solid fa-plus"></i><span>Adicionar</span></button>
             </div>
             <section class="account-overview" id="accountsOverview"></section>
-            <div id="accountsCardsList" class="account-card-grid unified"></div>
-            <section class="bank-hero inline-bank">
-              <div>
-                <span>Meu banco</span>
-                <strong id="bankBalance">R$0</strong>
-                <small>Retiradas precisam ser devolvidas com 4% de juros.</small>
-              </div>
-              <div class="bank-actions">
-                <button class="primary-button" data-modal="bankDeposit"><i class="fa-solid fa-arrow-down"></i><span>Guardar</span></button>
-                <button class="pill-button" data-modal="bankWithdraw"><i class="fa-solid fa-arrow-up"></i><span>Retirar</span></button>
-              </div>
+            <section class="wallet-layout">
+              <article class="bank-hero dudu-bank-card">
+                <div>
+                  <span>Dudu Bank</span>
+                  <strong id="bankBalance">R$0</strong>
+                  <small>Retiradas precisam ser devolvidas com 4% de juros.</small>
+                </div>
+                <div class="bank-actions">
+                  <button class="primary-button" data-modal="bankDeposit"><i class="fa-solid fa-arrow-down"></i><span>Guardar</span></button>
+                  <button class="pill-button" data-modal="bankWithdraw"><i class="fa-solid fa-arrow-up"></i><span>Retirar</span></button>
+                </div>
+              </article>
+              <section class="accounts-panel">
+                <div class="panel-title-row">
+                  <div class="panel-title">Contas e cartoes cadastrados</div>
+                  <span id="accountsCardsCount">0 itens</span>
+                </div>
+                <div id="accountsCardsList" class="account-card-grid unified"></div>
+              </section>
             </section>
             <div class="list-header">
               <span>Retiradas e devolucoes</span>

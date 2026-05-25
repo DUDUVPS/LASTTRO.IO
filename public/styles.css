@@ -685,16 +685,52 @@ button { border: 0; cursor: pointer; }
   gap: 12px;
 }
 
+.wallet-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, .75fr) minmax(360px, 1.25fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.accounts-panel {
+  min-width: 0;
+}
+
+.panel-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.panel-title-row .panel-title {
+  margin-bottom: 0;
+}
+
+.panel-title-row span {
+  color: var(--subtle);
+  font-size: 12px;
+}
+
 .account-card,
 .investment-card {
   position: relative;
-  min-height: 154px;
+  min-height: 184px;
   padding: 16px;
   display: grid;
   gap: 12px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+
+.account-card.is-account {
+  background: linear-gradient(135deg, rgba(46,204,138,.09), rgba(255,255,255,.02));
+}
+
+.account-card.is-card {
+  background: linear-gradient(135deg, rgba(74,158,255,.1), rgba(255,255,255,.02));
 }
 
 .account-card:hover,
@@ -714,8 +750,21 @@ button { border: 0; cursor: pointer; }
 .account-card-title,
 .investment-card-title {
   display: grid;
-  gap: 3px;
+  gap: 5px;
   min-width: 0;
+}
+
+.account-type-badge {
+  width: max-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: var(--blue) !important;
+  background: rgba(74,158,255,.1);
+  border: 1px solid rgba(74,158,255,.2);
+  font-size: 10px !important;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .8px;
 }
 
 .account-card-title strong,
@@ -734,8 +783,27 @@ button { border: 0; cursor: pointer; }
 .account-amount,
 .investment-amount {
   font-family: Rajdhani, sans-serif;
-  font-size: 30px;
+  font-size: 34px;
   line-height: 1;
+}
+
+.account-card-metrics {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.account-card-metrics span {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--line);
+  font-size: 11px;
 }
 
 .account-actions {
@@ -1017,7 +1085,15 @@ button { border: 0; cursor: pointer; }
   border-radius: 8px;
 }
 
-.inline-bank { margin-top: 14px; }
+.dudu-bank-card {
+  min-height: 250px;
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.dudu-bank-card .bank-actions {
+  justify-content: flex-start;
+}
 
 .bank-hero span {
   color: var(--muted);
@@ -1169,7 +1245,7 @@ input:focus, select:focus { border-color: rgba(74,158,255,.45); }
   .main { min-height: 100vh; }
   .menu-button { display: inline-flex !important; }
   .content { padding: 16px; }
-  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .account-overview, .account-card-grid.unified, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board { grid-template-columns: 1fr; }
+  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .account-overview, .account-card-grid.unified, .wallet-layout, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board { grid-template-columns: 1fr; }
   .cashflow-grid article { padding: 12px 0; border-left: 0 !important; }
   .cashflow-grid article + article { border-top: 1px solid var(--line); padding-left: 0; }
   .list-card { grid-template-columns: auto 1fr auto; }

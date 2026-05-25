@@ -24,7 +24,12 @@ const pages = {
 
 const categoryColors = ['#ff7a45', '#00c4b4', '#8b6fff', '#f0b43c', '#4a9eff', '#2ecc8a'];
 const movementCategories = ['Alimentacao', 'Transporte', 'Saude', 'Moradia', 'Lazer', 'Educacao', 'Salario', 'Freela', 'Renda extra', 'Investimentos', 'Diversos'];
-const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+const money = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+});
 
 function qs(selector, root = document) {
   return root.querySelector(selector);
@@ -40,12 +45,14 @@ function formatMoney(value) {
 
 function parseDecimal(value) {
   if (typeof value === 'number') return value;
-  const normalized = String(value || '')
-    .trim()
-    .replace(/\./g, '')
-    .replace(',', '.');
+  const raw = String(value || '').trim();
+  const normalized = raw.includes(',') ? raw.replace(/\./g, '').replace(',', '.') : raw;
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function moneyValue(value) {
+  return Number(parseDecimal(value).toFixed(2));
 }
 
 function escapeHtml(value) {
@@ -415,10 +422,11 @@ function renderAccountsCards() {
   const availableLimit = Math.max(0, cardLimit - cardUsed);
 
   qs('#accountsOverview').innerHTML = [
-    insightTemplate('Saldo em contas', formatMoney(accountBalance), `${accounts.length} contas cadastradas`),
+    insightTemplate('Dudu Bank + contas', formatMoney(accountBalance + Number(state.data.banco?.saldo || 0)), `${accounts.length} contas cadastradas`),
     insightTemplate('Faturas abertas', formatMoney(cardUsed), `${cards.length} cartoes cadastrados`),
     insightTemplate('Limite livre', formatMoney(availableLimit), `${cardLimit ? Math.round((availableLimit / cardLimit) * 100) : 0}% disponivel`)
   ].join('');
+  qs('#accountsCardsCount').textContent = `${items.length} ${items.length === 1 ? 'item' : 'itens'}`;
   qs('#accountsCardsList').innerHTML = items.map(accountCardTemplate).join('') || emptyTemplate('Nenhuma conta ou cartao cadastrado.');
 }
 
@@ -646,12 +654,14 @@ function accountCardTemplate(item) {
   const used = Number(item.usado || 0);
   const limit = Number(item.limite || 0);
   const pct = isCard && limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+  const available = Math.max(0, limit - used);
   return `
-    <article class="account-card">
+    <article class="account-card ${isCard ? 'is-card' : 'is-account'}">
       <div class="account-card-head">
         <div class="account-card-title">
+          <span class="account-type-badge">${isCard ? 'Cartao' : 'Conta'}</span>
           <strong>${escapeHtml(item.nome)}</strong>
-          <span>${escapeHtml(item.bandeira)} · ${isCard ? `vence dia ${item.vencimento}` : 'conta corrente'}</span>
+          <span>${escapeHtml(item.bandeira)} · ${isCard ? `vence dia ${item.vencimento}` : 'saldo disponivel'}</span>
         </div>
         <div class="account-actions">
           <button class="delete-button" data-edit-account="${item.id}" aria-label="Editar conta ou cartao"><i class="fa-regular fa-pen-to-square"></i></button>
@@ -660,8 +670,11 @@ function accountCardTemplate(item) {
       </div>
       <div>
         <div class="account-amount ${isCard ? 'red' : 'green'}">${isCard ? formatMoney(used) : formatMoney(balance)}</div>
-        <div class="account-card-detail">${isCard ? `de ${formatMoney(limit)} de limite` : 'saldo disponivel'}</div>
+        <div class="account-card-detail">${isCard ? `${pct}% usado · ${formatMoney(available)} livre` : 'conta para movimentar dinheiro'}</div>
         ${isCard ? `<div class="progress-line"><span style="width:${pct}%"></span></div>` : ''}
+        <div class="account-card-metrics">
+          ${isCard ? `<span>Limite ${formatMoney(limit)}</span><span>Fatura ${formatMoney(used)}</span>` : `<span>Saldo ${formatMoney(balance)}</span><span>${escapeHtml(item.bandeira)}</span>`}
+        </div>
       </div>
     </article>
   `;
@@ -695,7 +708,7 @@ function bankWithdrawalTemplate(item) {
       <div class="card-main">
         <strong>Retirada de ${formatMoney(item.valor)}</strong>
         <span>${escapeHtml(item.data)} · juros de ${formatMoney(item.juros)} · devolver ${formatMoney(item.totalDevolver)}</span>
-        <span class="card-note">${isOpen ? 'Em aberto no Meu Banco' : `Devolvido em ${escapeHtml(item.dataDevolucao || '')}`}</span>
+        <span class="card-note">${isOpen ? 'Em aberto no Dudu Bank' : `Devolvido em ${escapeHtml(item.dataDevolucao || '')}`}</span>
       </div>
       <span class="badge">${isOpen ? 'Aberto' : 'Devolvido'}</span>
       ${isOpen ? `<button class="pill-button" data-bank-return="${item.id}"><i class="fa-solid fa-rotate-left"></i><span>Devolver</span></button>` : '<span></span>'}
@@ -857,12 +870,12 @@ function openModal(type, editItem = null) {
   }
 
   if (type === 'bankDeposit') {
-    title.textContent = 'Guardar no Meu Banco';
+    title.textContent = 'Guardar no Dudu Bank';
     fields.innerHTML = `${field('valor', 'Valor para guardar', 'number', '0', true)}`;
   }
 
   if (type === 'bankWithdraw') {
-    title.textContent = 'Retirar do Meu Banco';
+    title.textContent = 'Retirar do Dudu Bank';
     fields.innerHTML = `${field('valor', 'Valor da retirada', 'number', '0', true)}`;
   }
 
@@ -910,7 +923,10 @@ async function submitModal(event) {
 }
 
 function normalizeFormNumbers(data) {
-  ['val', 'target', 'atual', 'salario', 'saldo', 'limite', 'usado', 'valor', 'rendimento'].forEach(key => {
+  ['val', 'target', 'atual', 'salario', 'saldo', 'limite', 'usado', 'valor'].forEach(key => {
+    if (key in data) data[key] = moneyValue(data[key]);
+  });
+  ['rendimento'].forEach(key => {
     if (key in data) data[key] = parseDecimal(data[key]);
   });
 }
