@@ -1017,6 +1017,8 @@ button { border: 0; cursor: pointer; }
   border-radius: 8px;
 }
 
+.inline-bank { margin-top: 14px; }
+
 .bank-hero span {
   color: var(--muted);
   text-transform: uppercase;

@@ -38,6 +38,16 @@ function formatMoney(value) {
   return money.format(Number(value || 0));
 }
 
+function parseDecimal(value) {
+  if (typeof value === 'number') return value;
+  const normalized = String(value || '')
+    .trim()
+    .replace(/\./g, '')
+    .replace(',', '.');
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({
     '&': '&amp;',
@@ -366,7 +376,6 @@ function renderFinancePrimaryAction() {
     cards: { modal: 'account', label: 'Conta/cartao', icon: 'fa-credit-card' },
     movements: { modal: 'transaction', label: 'Transacao', icon: 'fa-plus' },
     investments: { modal: 'investment', label: 'Investimento', icon: 'fa-chart-line' },
-    bank: { modal: 'bankDeposit', label: 'Guardar', icon: 'fa-arrow-down' }
   };
   const action = actions[state.financeTab] || actions.cards;
   const button = qs('#financePrimaryAction');
@@ -861,7 +870,11 @@ function openModal(type, editItem = null) {
 }
 
 function field(name, label, type, value, required) {
-  return `<label>${label}<input name="${name}" type="${type}" value="${value}" ${required ? 'required' : ''}></label>`;
+  const decimalFields = ['val', 'target', 'atual', 'salario', 'saldo', 'limite', 'usado', 'valor', 'rendimento'];
+  const inputType = type === 'number' && decimalFields.includes(name) ? 'text' : type;
+  const decimalAttrs = inputType === 'text' && decimalFields.includes(name) ? ' inputmode="decimal"' : '';
+  const step = type === 'number' && inputType === 'number' ? ' step="1"' : '';
+  return `<label>${label}<input name="${name}" type="${inputType}" value="${value}"${decimalAttrs}${step} ${required ? 'required' : ''}></label>`;
 }
 
 async function submitModal(event) {
@@ -871,6 +884,7 @@ async function submitModal(event) {
   if (submitter?.value === 'cancel') return qs('#entityDialog').close();
 
   const data = Object.fromEntries(new FormData(form).entries());
+  normalizeFormNumbers(data);
   const paths = {
     transaction: '/api/transacoes',
     goal: '/api/metas',
@@ -893,6 +907,12 @@ async function submitModal(event) {
   state.editing = null;
   qs('#entityDialog').close();
   await loadDashboard();
+}
+
+function normalizeFormNumbers(data) {
+  ['val', 'target', 'atual', 'salario', 'saldo', 'limite', 'usado', 'valor', 'rendimento'].forEach(key => {
+    if (key in data) data[key] = parseDecimal(data[key]);
+  });
 }
 
 async function deleteEntity(collection, id) {

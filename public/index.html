@@ -213,7 +213,6 @@
             <button class="finance-tab active" data-finance-tab="cards"><i class="fa-regular fa-credit-card"></i><span>Contas e cartoes</span></button>
             <button class="finance-tab" data-finance-tab="movements"><i class="fa-solid fa-arrow-right-arrow-left"></i><span>Movimentacoes</span></button>
             <button class="finance-tab" data-finance-tab="investments"><i class="fa-solid fa-chart-line"></i><span>Investimentos</span></button>
-            <button class="finance-tab" data-finance-tab="bank"><i class="fa-solid fa-building-columns"></i><span>Meu banco</span></button>
           </div>
 
           <div class="finance-panel active" id="finance-tab-cards">
@@ -223,6 +222,22 @@
             </div>
             <section class="account-overview" id="accountsOverview"></section>
             <div id="accountsCardsList" class="account-card-grid unified"></div>
+            <section class="bank-hero inline-bank">
+              <div>
+                <span>Meu banco</span>
+                <strong id="bankBalance">R$0</strong>
+                <small>Retiradas precisam ser devolvidas com 4% de juros.</small>
+              </div>
+              <div class="bank-actions">
+                <button class="primary-button" data-modal="bankDeposit"><i class="fa-solid fa-arrow-down"></i><span>Guardar</span></button>
+                <button class="pill-button" data-modal="bankWithdraw"><i class="fa-solid fa-arrow-up"></i><span>Retirar</span></button>
+              </div>
+            </section>
+            <div class="list-header">
+              <span>Retiradas e devolucoes</span>
+              <span id="bankOpenTotal">R$0 em aberto</span>
+            </div>
+            <div id="bankWithdrawalsList" class="list"></div>
           </div>
 
           <div class="finance-panel" id="finance-tab-movements">
@@ -286,24 +301,6 @@
             <div id="investmentsList" class="investment-grid"></div>
           </div>
 
-          <div class="finance-panel" id="finance-tab-bank">
-            <section class="bank-hero">
-              <div>
-                <span>Meu banco</span>
-                <strong id="bankBalance">R$0</strong>
-                <small>Retiradas precisam ser devolvidas com 4% de juros.</small>
-              </div>
-              <div class="bank-actions">
-                <button class="primary-button" data-modal="bankDeposit"><i class="fa-solid fa-arrow-down"></i><span>Guardar</span></button>
-                <button class="pill-button" data-modal="bankWithdraw"><i class="fa-solid fa-arrow-up"></i><span>Retirar</span></button>
-              </div>
-            </section>
-            <div class="list-header">
-              <span>Retiradas e devolucoes</span>
-              <span id="bankOpenTotal">R$0 em aberto</span>
-            </div>
-            <div id="bankWithdrawalsList" class="list"></div>
-          </div>
         </div>
 
         <div class="view" id="view-goals">

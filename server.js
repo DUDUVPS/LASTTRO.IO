@@ -181,6 +181,16 @@ function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+function parseDecimal(value, fallback = 0) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : fallback;
+  const normalized = String(value ?? '')
+    .trim()
+    .replace(/\./g, '')
+    .replace(',', '.');
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
@@ -289,7 +299,7 @@ function googleCallbackHtml(payload) {
 
 function normalizeTransaction(item) {
   const tipo = ['entrada', 'saida', 'investimento'].includes(item.tipo) ? item.tipo : 'saida';
-  const rawVal = Number(item.val || 0);
+  const rawVal = parseDecimal(item.val);
   const val = tipo === 'saida' ? -Math.abs(rawVal) : Math.abs(rawVal);
   return {
     id: item.id || crypto.randomUUID(),
@@ -332,7 +342,7 @@ function normalizeUserData(data = {}) {
     contasCartoes: (data.contasCartoes || []).map(normalizeAccountCard),
     investimentosCarteira: data.investimentosCarteira || [],
     banco: {
-      saldo: Number(data.banco?.saldo || 0),
+      saldo: parseDecimal(data.banco?.saldo),
       retiradas: data.banco?.retiradas || []
     }
   };
@@ -351,10 +361,10 @@ function normalizeAccountCard(item) {
     nome: String(item.nome || 'Nova conta').trim(),
     tipo: ['conta', 'cartao'].includes(item.tipo) ? item.tipo : 'cartao',
     bandeira: String(item.bandeira || 'Nao informado').trim(),
-    saldo: Number(item.saldo || 0),
-    limite: Number(item.limite || 0),
-    usado: Number(item.usado || 0),
-    vencimento: Number(item.vencimento || 1)
+    saldo: parseDecimal(item.saldo),
+    limite: parseDecimal(item.limite),
+    usado: parseDecimal(item.usado),
+    vencimento: parseDecimal(item.vencimento, 1)
   };
 }
 
@@ -362,8 +372,8 @@ function normalizeGoal(item) {
   return {
     id: item.id || crypto.randomUUID(),
     nome: String(item.nome || 'Nova meta').trim(),
-    target: Number(item.target || 0),
-    atual: Number(item.atual || 0),
+    target: parseDecimal(item.target),
+    atual: parseDecimal(item.atual),
     cor: item.cor || '#4a9eff',
     deadline: item.deadline || 'Sem prazo'
   };
@@ -375,8 +385,8 @@ function normalizeWork(item) {
     nome: String(item.nome || 'Novo trabalho').trim(),
     tipo: String(item.tipo || 'Freelancer').trim(),
     status: ['ativo', 'andamento', 'concluido'].includes(item.status) ? item.status : 'andamento',
-    salario: Number(item.salario || 0),
-    horas: Number(item.horas || 1),
+    salario: parseDecimal(item.salario),
+    horas: parseDecimal(item.horas, 1),
     inicio: item.inicio || new Date().toISOString().slice(0, 10)
   };
 }
@@ -600,8 +610,8 @@ async function handleApi(req, res, pathname) {
       id: crypto.randomUUID(),
       nome: String(body.nome || 'Novo investimento').trim(),
       tipo: String(body.tipo || 'Renda fixa').trim(),
-      valor: Number(body.valor || 0),
-      rendimento: Number(body.rendimento || 0),
+      valor: parseDecimal(body.valor),
+      rendimento: parseDecimal(body.rendimento),
       data: body.data || new Date().toISOString().slice(0, 10)
     };
     data.investimentosCarteira.unshift(created);
@@ -611,7 +621,7 @@ async function handleApi(req, res, pathname) {
 
   if (req.method === 'POST' && pathname === '/api/banco/depositar') {
     const body = await readBody(req);
-    const valor = Math.max(0, Number(body.valor || 0));
+    const valor = Math.max(0, parseDecimal(body.valor));
     data.banco.saldo += valor;
     await writeDb(db);
     return send(res, 201, data.banco);
@@ -619,7 +629,7 @@ async function handleApi(req, res, pathname) {
 
   if (req.method === 'POST' && pathname === '/api/banco/retirar') {
     const body = await readBody(req);
-    const valor = Math.max(0, Number(body.valor || 0));
+    const valor = Math.max(0, parseDecimal(body.valor));
     if (valor <= 0) return send(res, 400, { error: 'Valor invalido' });
     if (valor > data.banco.saldo) return send(res, 400, { error: 'Saldo insuficiente no Meu Banco' });
     const retirada = {
