@@ -410,8 +410,7 @@ function renderAccountsCards() {
     insightTemplate('Faturas abertas', formatMoney(cardUsed), `${cards.length} cartoes cadastrados`),
     insightTemplate('Limite livre', formatMoney(availableLimit), `${cardLimit ? Math.round((availableLimit / cardLimit) * 100) : 0}% disponivel`)
   ].join('');
-  qs('#accountsList').innerHTML = accounts.map(accountCardTemplate).join('') || emptyTemplate('Nenhuma conta cadastrada.');
-  qs('#cardsList').innerHTML = cards.map(accountCardTemplate).join('') || emptyTemplate('Nenhum cartao cadastrado.');
+  qs('#accountsCardsList').innerHTML = items.map(accountCardTemplate).join('') || emptyTemplate('Nenhuma conta ou cartao cadastrado.');
 }
 
 function renderInvestments() {

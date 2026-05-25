@@ -675,15 +675,14 @@ button { border: 0; cursor: pointer; }
   margin-bottom: 14px;
 }
 
-.account-columns {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
 .account-card-grid {
   display: grid;
   gap: 10px;
+}
+
+.account-card-grid.unified {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .account-card,
@@ -1168,7 +1167,7 @@ input:focus, select:focus { border-color: rgba(74,158,255,.45); }
   .main { min-height: 100vh; }
   .menu-button { display: inline-flex !important; }
   .content { padding: 16px; }
-  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .account-overview, .account-columns, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board { grid-template-columns: 1fr; }
+  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .account-overview, .account-card-grid.unified, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board { grid-template-columns: 1fr; }
   .cashflow-grid article { padding: 12px 0; border-left: 0 !important; }
   .cashflow-grid article + article { border-top: 1px solid var(--line); padding-left: 0; }
   .list-card { grid-template-columns: auto 1fr auto; }
