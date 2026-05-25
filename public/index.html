@@ -210,42 +210,25 @@
           </section>
 
           <div class="finance-tabs">
-            <button class="finance-tab active" data-finance-tab="cards"><i class="fa-regular fa-credit-card"></i><span>Contas e cartoes</span></button>
+            <button class="finance-tab active" data-finance-tab="account"><i class="fa-regular fa-credit-card"></i><span>Conta</span></button>
             <button class="finance-tab" data-finance-tab="movements"><i class="fa-solid fa-arrow-right-arrow-left"></i><span>Movimentacoes</span></button>
             <button class="finance-tab" data-finance-tab="investments"><i class="fa-solid fa-chart-line"></i><span>Investimentos</span></button>
+            <button class="finance-tab" data-finance-tab="bank"><i class="fa-solid fa-building-columns"></i><span>Dudu Bank</span></button>
           </div>
 
-          <div class="finance-panel active" id="finance-tab-cards">
+          <div class="finance-panel active" id="finance-tab-account">
             <div class="list-header">
-              <span>Carteira financeira</span>
+              <span>Contas</span>
               <button class="pill-button" data-modal="account"><i class="fa-solid fa-plus"></i><span>Adicionar</span></button>
             </div>
             <section class="account-overview" id="accountsOverview"></section>
-            <section class="wallet-layout">
-              <article class="bank-hero dudu-bank-card">
-                <div>
-                  <span>Dudu Bank</span>
-                  <strong id="bankBalance">R$0</strong>
-                  <small>Retiradas precisam ser devolvidas com 4% de juros.</small>
-                </div>
-                <div class="bank-actions">
-                  <button class="primary-button" data-modal="bankDeposit"><i class="fa-solid fa-arrow-down"></i><span>Guardar</span></button>
-                  <button class="pill-button" data-modal="bankWithdraw"><i class="fa-solid fa-arrow-up"></i><span>Retirar</span></button>
-                </div>
-              </article>
-              <section class="accounts-panel">
-                <div class="panel-title-row">
-                  <div class="panel-title">Contas e cartoes cadastrados</div>
-                  <span id="accountsCardsCount">0 itens</span>
-                </div>
-                <div id="accountsCardsList" class="account-card-grid unified"></div>
-              </section>
+            <section class="accounts-panel">
+              <div class="panel-title-row">
+                <div class="panel-title">Saldo e cartao de credito</div>
+                <span id="accountsCardsCount">0 itens</span>
+              </div>
+              <div id="accountsCardsList" class="account-card-grid unified"></div>
             </section>
-            <div class="list-header">
-              <span>Retiradas e devolucoes</span>
-              <span id="bankOpenTotal">R$0 em aberto</span>
-            </div>
-            <div id="bankWithdrawalsList" class="list"></div>
           </div>
 
           <div class="finance-panel" id="finance-tab-movements">
@@ -307,6 +290,25 @@
               </article>
             </section>
             <div id="investmentsList" class="investment-grid"></div>
+          </div>
+
+          <div class="finance-panel" id="finance-tab-bank">
+            <article class="bank-hero">
+              <div>
+                <span>Dudu Bank</span>
+                <strong id="bankBalance">R$0</strong>
+                <small>Guarde dinheiro aqui e retire quando precisar. Cada retirada volta com 4% de juros.</small>
+              </div>
+              <div class="bank-actions">
+                <button class="primary-button" data-modal="bankDeposit"><i class="fa-solid fa-arrow-down"></i><span>Guardar</span></button>
+                <button class="pill-button" data-modal="bankWithdraw"><i class="fa-solid fa-arrow-up"></i><span>Retirar</span></button>
+              </div>
+            </article>
+            <div class="list-header">
+              <span>Retiradas e devolucoes</span>
+              <span id="bankOpenTotal">R$0 em aberto</span>
+            </div>
+            <div id="bankWithdrawalsList" class="list"></div>
           </div>
 
         </div>

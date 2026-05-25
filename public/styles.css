@@ -685,13 +685,6 @@ button { border: 0; cursor: pointer; }
   gap: 12px;
 }
 
-.wallet-layout {
-  display: grid;
-  grid-template-columns: minmax(260px, .75fr) minmax(360px, 1.25fr);
-  gap: 14px;
-  align-items: start;
-}
-
 .accounts-panel {
   min-width: 0;
 }
@@ -723,6 +716,10 @@ button { border: 0; cursor: pointer; }
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+
+.account-combo-card {
+  min-height: 210px;
 }
 
 .account-card.is-account {
@@ -784,6 +781,39 @@ button { border: 0; cursor: pointer; }
 .investment-amount {
   font-family: Rajdhani, sans-serif;
   font-size: 34px;
+  line-height: 1;
+}
+
+.account-combo-values {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.account-money-block {
+  min-height: 86px;
+  padding: 12px;
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255,255,255,.04);
+}
+
+.account-money-block:only-child {
+  grid-column: 1 / -1;
+}
+
+.account-money-block span,
+.account-money-block small {
+  color: var(--subtle);
+  font-size: 11px;
+}
+
+.account-money-block strong {
+  font-family: Rajdhani, sans-serif;
+  font-size: 30px;
   line-height: 1;
 }
 
@@ -1085,16 +1115,6 @@ button { border: 0; cursor: pointer; }
   border-radius: 8px;
 }
 
-.dudu-bank-card {
-  min-height: 250px;
-  align-items: flex-start;
-  flex-direction: column;
-}
-
-.dudu-bank-card .bank-actions {
-  justify-content: flex-start;
-}
-
 .bank-hero span {
   color: var(--muted);
   text-transform: uppercase;
@@ -1245,7 +1265,7 @@ input:focus, select:focus { border-color: rgba(74,158,255,.45); }
   .main { min-height: 100vh; }
   .menu-button { display: inline-flex !important; }
   .content { padding: 16px; }
-  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .account-overview, .account-card-grid.unified, .wallet-layout, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board { grid-template-columns: 1fr; }
+  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board { grid-template-columns: 1fr; }
   .cashflow-grid article { padding: 12px 0; border-left: 0 !important; }
   .cashflow-grid article + article { border-top: 1px solid var(--line); padding-left: 0; }
   .list-card { grid-template-columns: auto 1fr auto; }

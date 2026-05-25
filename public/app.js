@@ -1,7 +1,7 @@
 const state = {
   data: null,
   page: 'overview',
-  financeTab: 'cards',
+  financeTab: 'account',
   transactionFilter: 'todos',
   transactionCategory: 'todas',
   transactionSearch: '',
@@ -380,11 +380,12 @@ function categoryChipTemplate(item, index) {
 
 function renderFinancePrimaryAction() {
   const actions = {
-    cards: { modal: 'account', label: 'Conta/cartao', icon: 'fa-credit-card' },
+    account: { modal: 'account', label: 'Conta/cartao', icon: 'fa-credit-card' },
     movements: { modal: 'transaction', label: 'Transacao', icon: 'fa-plus' },
     investments: { modal: 'investment', label: 'Investimento', icon: 'fa-chart-line' },
+    bank: { modal: 'bankDeposit', label: 'Guardar', icon: 'fa-arrow-down' },
   };
-  const action = actions[state.financeTab] || actions.cards;
+  const action = actions[state.financeTab] || actions.account;
   const button = qs('#financePrimaryAction');
   button.dataset.modal = action.modal;
   button.innerHTML = `<i class="fa-solid ${action.icon}"></i><span>${action.label}</span>`;
@@ -422,12 +423,13 @@ function renderAccountsCards() {
   const availableLimit = Math.max(0, cardLimit - cardUsed);
 
   qs('#accountsOverview').innerHTML = [
-    insightTemplate('Dudu Bank + contas', formatMoney(accountBalance + Number(state.data.banco?.saldo || 0)), `${accounts.length} contas cadastradas`),
+    insightTemplate('Saldo em contas', formatMoney(accountBalance), `${accounts.length} contas cadastradas`),
     insightTemplate('Faturas abertas', formatMoney(cardUsed), `${cards.length} cartoes cadastrados`),
     insightTemplate('Limite livre', formatMoney(availableLimit), `${cardLimit ? Math.round((availableLimit / cardLimit) * 100) : 0}% disponivel`)
   ].join('');
-  qs('#accountsCardsCount').textContent = `${items.length} ${items.length === 1 ? 'item' : 'itens'}`;
-  qs('#accountsCardsList').innerHTML = items.map(accountCardTemplate).join('') || emptyTemplate('Nenhuma conta ou cartao cadastrado.');
+  const groups = buildAccountGroups(accounts, cards);
+  qs('#accountsCardsCount').textContent = `${groups.length} ${groups.length === 1 ? 'grupo' : 'grupos'}`;
+  qs('#accountsCardsList').innerHTML = groups.map(accountGroupTemplate).join('') || emptyTemplate('Nenhuma conta ou cartao cadastrado.');
 }
 
 function renderInvestments() {
@@ -648,33 +650,79 @@ function transactionCardTemplate(item) {
   `;
 }
 
-function accountCardTemplate(item) {
-  const isCard = item.tipo === 'cartao';
-  const balance = Number(item.saldo || 0);
-  const used = Number(item.usado || 0);
-  const limit = Number(item.limite || 0);
-  const pct = isCard && limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+function accountKey(item) {
+  return `${item.nome || ''} ${item.bandeira || ''}`
+    .toLowerCase()
+    .replace(/cartao|cartão|credito|crédito|conta|corrente|principal/g, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function buildAccountGroups(accounts, cards) {
+  const usedCards = new Set();
+  const groups = accounts.map(account => {
+    const key = accountKey(account);
+    const relatedCards = cards.filter(card => {
+      const cardKey = accountKey(card);
+      const sameBank = key && cardKey && (key.includes(cardKey) || cardKey.includes(key));
+      const sameName = String(card.nome || '').toLowerCase().includes(String(account.nome || '').toLowerCase());
+      if (sameBank || sameName) usedCards.add(card.id);
+      return sameBank || sameName;
+    });
+    return { account, cards: relatedCards };
+  });
+
+  cards
+    .filter(card => !usedCards.has(card.id))
+    .forEach(card => groups.push({ account: null, cards: [card] }));
+
+  return groups;
+}
+
+function accountGroupTemplate(group) {
+  const account = group.account;
+  const cards = group.cards || [];
+  const mainCard = cards[0];
+  const balance = Number(account?.saldo || 0);
+  const used = cards.reduce((sum, card) => sum + Number(card.usado || 0), 0);
+  const limit = cards.reduce((sum, card) => sum + Number(card.limite || 0), 0);
+  const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
   const available = Math.max(0, limit - used);
+  const title = account?.nome || mainCard?.nome || 'Cartao avulso';
+  const detail = account ? account.bandeira : mainCard?.bandeira || 'Cartao de credito';
+  const ids = [account, ...cards].filter(Boolean);
   return `
-    <article class="account-card ${isCard ? 'is-card' : 'is-account'}">
+    <article class="account-card account-combo-card ${account ? 'is-account' : 'is-card'}">
       <div class="account-card-head">
         <div class="account-card-title">
-          <span class="account-type-badge">${isCard ? 'Cartao' : 'Conta'}</span>
-          <strong>${escapeHtml(item.nome)}</strong>
-          <span>${escapeHtml(item.bandeira)} · ${isCard ? `vence dia ${item.vencimento}` : 'saldo disponivel'}</span>
+          <span class="account-type-badge">${account ? 'Conta' : 'Cartao'}</span>
+          <strong>${escapeHtml(title)}</strong>
+          <span>${escapeHtml(detail)} · ${cards.length ? `${cards.length} cartao${cards.length > 1 ? 'es' : ''} vinculado${cards.length > 1 ? 's' : ''}` : 'sem cartao de credito'}</span>
         </div>
         <div class="account-actions">
-          <button class="delete-button" data-edit-account="${item.id}" aria-label="Editar conta ou cartao"><i class="fa-regular fa-pen-to-square"></i></button>
-          <button class="delete-button" data-delete="contas-cartoes" data-id="${item.id}" aria-label="Excluir conta ou cartao"><i class="fa-regular fa-trash-can"></i></button>
+          ${account ? `<button class="delete-button" data-edit-account="${account.id}" aria-label="Editar conta"><i class="fa-regular fa-pen-to-square"></i></button>` : ''}
+          ${mainCard ? `<button class="delete-button" data-edit-account="${mainCard.id}" aria-label="Editar cartao"><i class="fa-solid fa-credit-card"></i></button>` : ''}
+          <button class="delete-button" data-delete="contas-cartoes" data-id="${ids[0]?.id || ''}" aria-label="Excluir item"><i class="fa-regular fa-trash-can"></i></button>
         </div>
       </div>
-      <div>
-        <div class="account-amount ${isCard ? 'red' : 'green'}">${isCard ? formatMoney(used) : formatMoney(balance)}</div>
-        <div class="account-card-detail">${isCard ? `${pct}% usado · ${formatMoney(available)} livre` : 'conta para movimentar dinheiro'}</div>
-        ${isCard ? `<div class="progress-line"><span style="width:${pct}%"></span></div>` : ''}
-        <div class="account-card-metrics">
-          ${isCard ? `<span>Limite ${formatMoney(limit)}</span><span>Fatura ${formatMoney(used)}</span>` : `<span>Saldo ${formatMoney(balance)}</span><span>${escapeHtml(item.bandeira)}</span>`}
-        </div>
+      <div class="account-combo-values">
+        ${account ? `
+          <div class="account-money-block">
+            <span>Saldo</span>
+            <strong class="green">${formatMoney(balance)}</strong>
+          </div>
+        ` : ''}
+        ${cards.length ? `
+          <div class="account-money-block">
+            <span>Credito usado</span>
+            <strong class="red">${formatMoney(used)}</strong>
+            <small>${formatMoney(available)} livre de ${formatMoney(limit)}</small>
+          </div>
+        ` : ''}
+      </div>
+      ${cards.length ? `<div class="progress-line"><span style="width:${pct}%"></span></div>` : ''}
+      <div class="account-card-metrics">
+        ${account ? `<span>Saldo ${formatMoney(balance)}</span>` : ''}
+        ${cards.length ? `<span>Fatura ${formatMoney(used)}</span><span>Limite ${formatMoney(limit)}</span>${mainCard?.vencimento ? `<span>Vence dia ${mainCard.vencimento}</span>` : ''}` : '<span>Sem cartao cadastrado</span>'}
       </div>
     </article>
   `;
