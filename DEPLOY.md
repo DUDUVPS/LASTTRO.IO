@@ -9,20 +9,14 @@
 
 ```text
 HOST=0.0.0.0
-DATA_DIR=/data
+MYSQL_URL=valor_do_mysql_no_railway
 GOOGLE_CLIENT_ID=seu_client_id_google
 GOOGLE_CLIENT_SECRET=seu_client_secret_google
 ```
 
-5. Em **Volumes**, crie um volume persistente e monte em:
+O LASTTRO usa MySQL quando encontra `MYSQL_URL` ou `DATABASE_URL`. No Railway, use a referencia de variavel do servico MySQL.
 
-```text
-/data
-```
-
-Sem esse volume, os dados podem sumir a cada redeploy.
-
-6. O Railway vai usar `railway.json` e `package.json` para iniciar o app.
+5. O Railway vai usar `railway.json` e `package.json` para iniciar o app.
 
 ## Render
 

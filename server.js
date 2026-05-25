@@ -10,6 +10,7 @@ const ROOT = __dirname;
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const DATA_DIR = process.env.DATA_DIR || path.join(ROOT, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
+const DATABASE_URL = process.env.DATABASE_URL || process.env.MYSQL_URL || '';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 
@@ -52,6 +53,8 @@ const initialData = {
 };
 
 const sessions = new Map();
+let mysqlPool = null;
+let mysqlReady = false;
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -62,6 +65,7 @@ const mimeTypes = {
 };
 
 async function ensureDb() {
+  if (DATABASE_URL) return ensureMysqlDb();
   await fs.mkdir(DATA_DIR, { recursive: true });
   try {
     await fs.access(DB_FILE);
@@ -72,13 +76,50 @@ async function ensureDb() {
 
 async function readDb() {
   await ensureDb();
+  if (DATABASE_URL) {
+    const [rows] = await mysqlPool.execute('SELECT data FROM lasttro_state WHERE id = ?', ['main']);
+    if (!rows.length) {
+      await writeDb(initialData);
+      return withDefaults(initialData);
+    }
+    return withDefaults(JSON.parse(rows[0].data));
+  }
   const db = JSON.parse(await fs.readFile(DB_FILE, 'utf8'));
   return withDefaults(db);
 }
 
 async function writeDb(data) {
+  if (DATABASE_URL) {
+    await ensureMysqlDb();
+    await mysqlPool.execute(
+      'INSERT INTO lasttro_state (id, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = CURRENT_TIMESTAMP',
+      ['main', JSON.stringify(data)]
+    );
+    return;
+  }
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.writeFile(DB_FILE, JSON.stringify(data, null, 2));
+}
+
+async function ensureMysqlDb() {
+  if (!mysqlPool) {
+    const mysql = require('mysql2/promise');
+    mysqlPool = mysql.createPool({
+      uri: DATABASE_URL,
+      waitForConnections: true,
+      connectionLimit: 5,
+      namedPlaceholders: false
+    });
+  }
+  if (mysqlReady) return;
+  await mysqlPool.execute(`
+    CREATE TABLE IF NOT EXISTS lasttro_state (
+      id VARCHAR(64) PRIMARY KEY,
+      data LONGTEXT NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+  mysqlReady = true;
 }
 
 function send(res, status, data, type = 'application/json; charset=utf-8') {
