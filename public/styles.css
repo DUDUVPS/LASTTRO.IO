@@ -1386,6 +1386,10 @@ input:focus, select:focus { border-color: rgba(74,158,255,.45); }
   .menu-button { display: inline-flex !important; }
   .content { padding: 16px; }
   .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board { grid-template-columns: 1fr; }
+  .dashboard-grid .panel:nth-child(1) { order: 1; }
+  .dashboard-grid .panel:nth-child(3) { order: 2; }
+  .dashboard-grid .panel:nth-child(2) { order: 3; }
+  .dashboard-grid .panel:nth-child(4) { order: 4; }
   .cashflow-grid article { padding: 12px 0; border-left: 0 !important; }
   .cashflow-grid article + article { border-top: 1px solid var(--line); padding-left: 0; }
   .list-card { grid-template-columns: auto 1fr auto; }
