@@ -276,7 +276,7 @@ function renderSummary() {
       : value;
   });
 
-  const total = Math.max(resumo.entradas + resumo.investimentos, resumo.gastos, 1);
+  const total = Math.max(resumo.saldo, resumo.gastos, resumo.patrimonio, 1);
   qs('#balanceTrack').style.width = `${Math.min(100, Math.max(6, (resumo.saldo / total) * 100))}%`;
 }
 
@@ -783,7 +783,7 @@ function accountGroupTemplate(group) {
             <strong>${formatMoney(used)}</strong>
           </div>
           <div class="credit-scale">
-            <div><small>exe:0</small><small>exe:${formatMoney(limit).replace('R$', '').trim()}</small></div>
+            <div><small>0</small><small>${formatMoney(limit).replace('R$', '').trim()}</small></div>
             <div class="progress-line"><span style="width:${pct}%"></span></div>
           </div>
         ` : `

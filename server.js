@@ -423,7 +423,6 @@ function buildResumo(db) {
   const entradas = db.transacoes.filter(t => t.tipo === 'entrada').reduce((s, t) => s + t.val, 0);
   const investimentos = db.transacoes.filter(t => t.tipo === 'investimento').reduce((s, t) => s + t.val, 0);
   const gastos = Math.abs(db.transacoes.filter(t => t.tipo === 'saida').reduce((s, t) => s + t.val, 0));
-  const saldo = entradas + investimentos - gastos;
   const carteiraInvestimentos = db.investimentosCarteira.reduce((s, i) => s + Number(i.valor || 0), 0);
   const bancoSaldo = Number(db.banco?.saldo || 0);
   const bancoAberto = (db.banco?.retiradas || [])
@@ -435,13 +434,14 @@ function buildResumo(db) {
   const contasSaldo = db.contasCartoes
     .filter(c => c.tipo === 'conta')
     .reduce((s, c) => s + Number(c.saldo || 0), 0);
+  const saldo = contasSaldo + bancoSaldo;
   const trabalhosRenda = db.trabalhos
     .filter(j => j.status !== 'concluido')
     .reduce((s, j) => s + Number(j.salario || 0), 0);
   const trabalhosHoras = db.trabalhos
     .filter(j => j.status !== 'concluido')
     .reduce((s, j) => s + Number(j.horas || 0), 0);
-  const patrimonio = db.metas.reduce((s, m) => s + Number(m.atual || 0), 0) + Math.max(saldo, 0) + carteiraInvestimentos + bancoSaldo + contasSaldo;
+  const patrimonio = bancoSaldo + contasSaldo + carteiraInvestimentos;
   const disponivelTotal = contasSaldo + bancoSaldo;
   const porCategoria = db.transacoes
     .filter(t => t.tipo === 'saida')
