@@ -7,6 +7,7 @@ const state = {
   transactionSearch: '',
   transactionSort: 'recent',
   chart: null,
+  overviewInvestmentChart: null,
   investmentChart: null,
   modalType: null,
   editing: null,
@@ -280,8 +281,9 @@ function renderSummary() {
 }
 
 function renderOverview() {
-  const { transacoes, metas, trabalhos, resumo } = state.data;
+  const { transacoes, metas, trabalhos, resumo, investimentosCarteira } = state.data;
   renderCategoryChart(resumo.porCategoria);
+  renderOverviewInvestmentChart(investimentosCarteira);
 
   qs('#goalPreview').innerHTML = metas.slice(0, 3).map(goalMiniTemplate).join('') || emptyTemplate('Nenhuma meta cadastrada.');
   qs('#latestTransactions').innerHTML = transacoes.slice(0, 4).map(transactionMiniTemplate).join('') || emptyTemplate('Nenhuma movimentacao registrada.');
@@ -309,6 +311,48 @@ function renderCategoryChart(items) {
   if (state.chart) state.chart.destroy();
 
   state.chart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data: values.length ? values : [1], backgroundColor: values.length ? colors : ['#2a2a28'], borderWidth: 0 }]
+    },
+    options: {
+      cutout: '70%',
+      plugins: { legend: { display: false } },
+      animation: { duration: 500 }
+    }
+  });
+}
+
+function investmentTypeItems(investments) {
+  const byType = investments.reduce((acc, item) => {
+    const key = item.tipo || 'Outros';
+    acc[key] = (acc[key] || 0) + Number(item.valor || 0);
+    return acc;
+  }, {});
+  return Object.entries(byType)
+    .map(([nome, valor]) => ({ nome, valor }))
+    .sort((a, b) => b.valor - a.valor);
+}
+
+function renderOverviewInvestmentChart(investments) {
+  const items = investmentTypeItems(investments);
+  const labels = items.map(item => item.nome);
+  const values = items.map(item => item.valor);
+  const colors = labels.map((_, index) => categoryColors[(index + 2) % categoryColors.length]);
+
+  qs('#overviewInvestmentLegend').innerHTML = items.map((item, index) => `
+    <div class="legend-row">
+      <span><span class="legend-dot" style="background:${colors[index]}"></span>${escapeHtml(item.nome)}</span>
+      <strong>${formatMoney(item.valor)}</strong>
+    </div>
+  `).join('') || emptyTemplate('Sem investimentos registrados.');
+
+  const ctx = qs('#overviewInvestmentChart');
+  if (!window.Chart || !ctx) return;
+  if (state.overviewInvestmentChart) state.overviewInvestmentChart.destroy();
+
+  state.overviewInvestmentChart = new Chart(ctx, {
     type: 'doughnut',
     data: {
       labels,
@@ -462,12 +506,7 @@ function renderInvestments() {
 }
 
 function renderInvestmentCharts(investments, total) {
-  const byType = investments.reduce((acc, item) => {
-    const key = item.tipo || 'Outros';
-    acc[key] = (acc[key] || 0) + Number(item.valor || 0);
-    return acc;
-  }, {});
-  const typeItems = Object.entries(byType).map(([nome, valor]) => ({ nome, valor })).sort((a, b) => b.valor - a.valor);
+  const typeItems = investmentTypeItems(investments);
   const labels = typeItems.map(item => item.nome);
   const values = typeItems.map(item => item.valor);
   const colors = labels.map((_, index) => categoryColors[index % categoryColors.length]);

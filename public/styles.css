@@ -372,6 +372,26 @@ button { border: 0; cursor: pointer; }
 
 .panel { padding: 18px 20px; min-height: 172px; }
 .panel-title { font-weight: 600; font-size: 14px; margin-bottom: 14px; }
+.overview-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.overview-chart-card {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.overview-chart-card > span {
+  color: var(--subtle);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+}
+
 .chart-row { display: flex; gap: 20px; align-items: center; }
 .chart-box { width: 118px; height: 118px; flex: 0 0 auto; }
 .legend { display: grid; gap: 8px; flex: 1; }
@@ -1390,6 +1410,7 @@ input:focus, select:focus { border-color: rgba(74,158,255,.45); }
   .dashboard-grid .panel:nth-child(3) { order: 2; }
   .dashboard-grid .panel:nth-child(2) { order: 3; }
   .dashboard-grid .panel:nth-child(4) { order: 4; }
+  .overview-chart-grid { grid-template-columns: 1fr; }
   .cashflow-grid article { padding: 12px 0; border-left: 0 !important; }
   .cashflow-grid article + article { border-top: 1px solid var(--line); padding-left: 0; }
   .list-card { grid-template-columns: auto 1fr auto; }

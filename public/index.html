@@ -142,10 +142,22 @@
 
           <section class="dashboard-grid">
             <article class="panel">
-              <div class="panel-title">Gastos por categoria</div>
-              <div class="chart-row">
-                <div class="chart-box"><canvas id="categoryChart"></canvas></div>
-                <div id="categoryLegend" class="legend"></div>
+              <div class="panel-title">Saidas e investimentos</div>
+              <div class="overview-chart-grid">
+                <div class="overview-chart-card">
+                  <span>Saidas</span>
+                  <div class="chart-row">
+                    <div class="chart-box"><canvas id="categoryChart"></canvas></div>
+                    <div id="categoryLegend" class="legend"></div>
+                  </div>
+                </div>
+                <div class="overview-chart-card">
+                  <span>Investimentos</span>
+                  <div class="chart-row">
+                    <div class="chart-box"><canvas id="overviewInvestmentChart"></canvas></div>
+                    <div id="overviewInvestmentLegend" class="legend"></div>
+                  </div>
+                </div>
               </div>
             </article>
 
