@@ -681,8 +681,8 @@ button { border: 0; cursor: pointer; }
 }
 
 .account-card-grid.unified {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
+  gap: 16px;
 }
 
 .accounts-panel {
@@ -716,10 +716,6 @@ button { border: 0; cursor: pointer; }
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
-}
-
-.account-combo-card {
-  min-height: 210px;
 }
 
 .account-card.is-account {
@@ -843,6 +839,130 @@ button { border: 0; cursor: pointer; }
 
 .account-actions .delete-button {
   background: rgba(255,255,255,.03);
+}
+
+.bank-account-card {
+  position: relative;
+  min-height: 420px;
+  padding: 22px;
+  display: grid;
+  grid-template-rows: auto 1fr 1fr auto;
+  gap: 18px;
+  overflow: hidden;
+  color: var(--text);
+  border: 1px solid rgba(74,158,255,.24);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(46,204,138,.18), transparent 34%),
+    linear-gradient(135deg, rgba(74,158,255,.18), rgba(46,204,138,.1) 48%, rgba(255,255,255,.03));
+}
+
+.bank-account-card.debit-only {
+  grid-template-rows: auto 1fr auto;
+}
+
+.bank-account-card.debit-only .credit {
+  display: none;
+}
+
+.bank-account-top,
+.bank-card-footer,
+.credit-scale div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bank-account-top strong {
+  display: block;
+  margin-top: 8px;
+  font-family: Rajdhani, sans-serif;
+  font-size: 34px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.bank-account-top small,
+.bank-card-footer,
+.credit-scale small {
+  color: var(--subtle);
+  font-size: 12px;
+}
+
+.bank-card-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.bank-card-actions .delete-button {
+  background: rgba(255,255,255,.05);
+}
+
+.bank-card-section {
+  min-height: 132px;
+  padding: 22px;
+  display: grid;
+  align-content: center;
+  gap: 16px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  background: rgba(8,12,18,.28);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
+}
+
+.bank-card-section > span {
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.bank-card-value {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.bank-card-value small {
+  color: rgba(255,255,255,.45);
+  font-family: Rajdhani, sans-serif;
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: lowercase;
+}
+
+.bank-card-value strong {
+  color: var(--text);
+  font-family: Rajdhani, sans-serif;
+  font-size: 42px;
+  line-height: 1;
+}
+
+.bank-card-value.muted strong {
+  color: var(--muted);
+  font-size: 34px;
+}
+
+.credit-scale {
+  display: grid;
+  gap: 8px;
+}
+
+.credit-scale .progress-line {
+  height: 8px;
+  margin-top: 0;
+  background: rgba(0,0,0,.45);
+}
+
+.credit-scale .progress-line span {
+  background: linear-gradient(90deg, var(--blue), var(--green));
+}
+
+.bank-card-footer {
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .investment-overview {
@@ -1270,6 +1390,11 @@ input:focus, select:focus { border-color: rgba(74,158,255,.45); }
   .cashflow-grid article + article { border-top: 1px solid var(--line); padding-left: 0; }
   .list-card { grid-template-columns: auto 1fr auto; }
   .list-card .delete-button { grid-column: 3; }
+  .bank-account-card { min-height: 0; padding: 16px; gap: 14px; }
+  .bank-account-top { align-items: flex-start; }
+  .bank-card-section { min-height: 112px; padding: 16px; }
+  .bank-card-value small { font-size: 28px; }
+  .bank-card-value strong { font-size: 34px; }
 }
 
 @media (max-width: 560px) {

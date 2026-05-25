@@ -690,40 +690,50 @@ function accountGroupTemplate(group) {
   const title = account?.nome || mainCard?.nome || 'Cartao avulso';
   const detail = account ? account.bandeira : mainCard?.bandeira || 'Cartao de credito';
   const ids = [account, ...cards].filter(Boolean);
+  const today = new Date().toLocaleDateString('pt-BR');
   return `
-    <article class="account-card account-combo-card ${account ? 'is-account' : 'is-card'}">
-      <div class="account-card-head">
-        <div class="account-card-title">
-          <span class="account-type-badge">${account ? 'Conta' : 'Cartao'}</span>
+    <article class="bank-account-card ${cards.length ? 'has-credit' : 'debit-only'}">
+      <div class="bank-account-top">
+        <div>
+          <span class="account-type-badge">${account ? 'Banco' : 'Cartao'}</span>
           <strong>${escapeHtml(title)}</strong>
-          <span>${escapeHtml(detail)} · ${cards.length ? `${cards.length} cartao${cards.length > 1 ? 'es' : ''} vinculado${cards.length > 1 ? 's' : ''}` : 'sem cartao de credito'}</span>
+          <small>${escapeHtml(detail)}</small>
         </div>
-        <div class="account-actions">
+        <div class="bank-card-actions">
           ${account ? `<button class="delete-button" data-edit-account="${account.id}" aria-label="Editar conta"><i class="fa-regular fa-pen-to-square"></i></button>` : ''}
           ${mainCard ? `<button class="delete-button" data-edit-account="${mainCard.id}" aria-label="Editar cartao"><i class="fa-solid fa-credit-card"></i></button>` : ''}
           <button class="delete-button" data-delete="contas-cartoes" data-id="${ids[0]?.id || ''}" aria-label="Excluir item"><i class="fa-regular fa-trash-can"></i></button>
         </div>
       </div>
-      <div class="account-combo-values">
-        ${account ? `
-          <div class="account-money-block">
-            <span>Saldo</span>
-            <strong class="green">${formatMoney(balance)}</strong>
-          </div>
-        ` : ''}
+      <div class="bank-card-section debit">
+        <span>Debito</span>
+        <div class="bank-card-value">
+          <small>saldo</small>
+          <strong>${account ? formatMoney(balance) : 'Nao cadastrado'}</strong>
+        </div>
+      </div>
+      <div class="bank-card-section credit ${cards.length ? '' : 'is-empty'}">
+        <span>Credito</span>
         ${cards.length ? `
-          <div class="account-money-block">
-            <span>Credito usado</span>
-            <strong class="red">${formatMoney(used)}</strong>
-            <small>${formatMoney(available)} livre de ${formatMoney(limit)}</small>
+          <div class="bank-card-value">
+            <small>fatura</small>
+            <strong>${formatMoney(used)}</strong>
           </div>
-        ` : ''}
+          <div class="credit-scale">
+            <div><small>exe:0</small><small>exe:${formatMoney(limit).replace('R$', '').trim()}</small></div>
+            <div class="progress-line"><span style="width:${pct}%"></span></div>
+          </div>
+        ` : `
+          <div class="bank-card-value muted">
+            <small>fatura</small>
+            <strong>Sem credito</strong>
+          </div>
+        `}
       </div>
-      ${cards.length ? `<div class="progress-line"><span style="width:${pct}%"></span></div>` : ''}
-      <div class="account-card-metrics">
-        ${account ? `<span>Saldo ${formatMoney(balance)}</span>` : ''}
-        ${cards.length ? `<span>Fatura ${formatMoney(used)}</span><span>Limite ${formatMoney(limit)}</span>${mainCard?.vencimento ? `<span>Vence dia ${mainCard.vencimento}</span>` : ''}` : '<span>Sem cartao cadastrado</span>'}
-      </div>
+      <footer class="bank-card-footer">
+        <span>${cards.length ? `${formatMoney(available)} livre` : 'somente debito'}</span>
+        <span>atualizacao ${today}</span>
+      </footer>
     </article>
   `;
 }
