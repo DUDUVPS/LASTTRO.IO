@@ -20,7 +20,7 @@ const pages = {
   overview: { title: 'Visao geral', subtitle: 'maio de 2026' },
   finance: { title: 'Financeiro', subtitle: 'entradas, saidas e investimentos' },
   goals: { title: 'Metas', subtitle: 'objetivos e progresso' },
-  work: { title: 'Trabalhos', subtitle: 'renda, horas e status' }
+  work: { title: 'Faculdade', subtitle: 'provas, trabalhos e anotacoes' }
 };
 
 const categoryColors = ['#ff7a45', '#00c4b4', '#8b6fff', '#f0b43c', '#4a9eff', '#2ecc8a'];
@@ -291,7 +291,7 @@ function renderOverview() {
     .filter(work => work.status !== 'concluido')
     .slice(0, 3)
     .map(workMiniTemplate)
-    .join('') || emptyTemplate('Nenhum trabalho ativo.');
+    .join('') || emptyTemplate('Nenhum item da faculdade.');
 }
 
 function renderCategoryChart(items) {
@@ -603,41 +603,55 @@ function renderGoals() {
 }
 
 function renderWork() {
-  const works = state.data.trabalhos;
-  const active = works.filter(work => work.status === 'ativo');
-  const pending = works.filter(work => work.status === 'andamento');
+  const works = state.data.trabalhos.map(normalizeAcademicItem);
+  const exams = works.filter(work => academicKind(work) === 'prova');
+  const assignments = works.filter(work => academicKind(work) === 'trabalho');
+  const notes = works.filter(work => academicKind(work) === 'anotacao');
+  const pendingItems = works.filter(work => work.status !== 'concluido');
   const done = works.filter(work => work.status === 'concluido');
-  const activeWorks = works.filter(work => work.status !== 'concluido');
-  const revenue = activeWorks.reduce((sum, work) => sum + Number(work.salario || 0), 0);
-  const hours = activeWorks.reduce((sum, work) => sum + Number(work.horas || 0), 0);
-  const hourly = revenue / Math.max(hours, 1);
 
   qs('#workOverview').innerHTML = `
     <article class="work-summary-card primary">
-      <span>Renda ativa</span>
-      <strong class="green">${formatMoney(revenue)}</strong>
-      <small>${activeWorks.length} trabalhos gerando receita</small>
+      <span>Provas</span>
+      <strong class="blue">${exams.length}</strong>
+      <small>${exams.filter(item => item.status !== 'concluido').length} pendentes</small>
     </article>
     <article class="work-summary-card">
-      <span>Horas por mes</span>
-      <strong>${hours}h</strong>
-      <small>carga ativa estimada</small>
+      <span>Trabalhos</span>
+      <strong>${assignments.length}</strong>
+      <small>${assignments.filter(item => item.status !== 'concluido').length} para entregar</small>
     </article>
     <article class="work-summary-card">
-      <span>Media por hora</span>
-      <strong class="blue">${formatMoney(hourly)}</strong>
-      <small>renda dividida pelas horas</small>
+      <span>Anotacoes</span>
+      <strong>${notes.length}</strong>
+      <small>materiais salvos</small>
     </article>
     <article class="work-summary-card">
       <span>Concluidos</span>
       <strong>${done.length}</strong>
-      <small>historico encerrado</small>
+      <small>${pendingItems.length} itens pendentes</small>
     </article>
   `;
 
-  qs('#activeWorkList').innerHTML = active.map(workCardTemplate).join('') || emptyTemplate('Nenhum trabalho ativo.');
-  qs('#pendingWorkList').innerHTML = pending.map(workCardTemplate).join('') || emptyTemplate('Nada em andamento.');
-  qs('#doneWorkList').innerHTML = done.map(workCardTemplate).join('') || emptyTemplate('Nenhum concluido.');
+  qs('#activeWorkList').innerHTML = exams.map(workCardTemplate).join('') || emptyTemplate('Nenhuma prova cadastrada.');
+  qs('#pendingWorkList').innerHTML = assignments.map(workCardTemplate).join('') || emptyTemplate('Nenhum trabalho cadastrado.');
+  qs('#doneWorkList').innerHTML = notes.map(workCardTemplate).join('') || emptyTemplate('Nenhuma anotacao cadastrada.');
+}
+
+function academicKind(work) {
+  const value = String(work.tipo || '').toLowerCase();
+  if (value.includes('prova')) return 'prova';
+  if (value.includes('anot')) return 'anotacao';
+  return 'trabalho';
+}
+
+function normalizeAcademicItem(work) {
+  return {
+    ...work,
+    tipo: work.tipo || 'Trabalho',
+    disciplina: work.disciplina || work.area || '',
+    anotacao: work.anotacao || work.descricao || ''
+  };
 }
 
 function transactionMiniTemplate(item) {
@@ -665,10 +679,11 @@ function goalMiniTemplate(goal) {
 }
 
 function workMiniTemplate(work) {
+  const item = normalizeAcademicItem(work);
   return `
     <div class="mini-item">
-      <div class="mini-top"><strong>${escapeHtml(work.nome)}</strong><span>${formatMoney(work.salario)}</span></div>
-      <div class="mini-sub">${escapeHtml(work.tipo)} · ${work.horas}h/mes · ${escapeHtml(work.status)}</div>
+      <div class="mini-top"><strong>${escapeHtml(item.nome)}</strong><span>${escapeHtml(item.tipo)}</span></div>
+      <div class="mini-sub">${escapeHtml(item.disciplina || 'Sem materia')} · ${escapeHtml(item.inicio)} · ${escapeHtml(item.status)}</div>
     </div>
   `;
 }
@@ -857,26 +872,29 @@ function goalCardTemplate(goal) {
 }
 
 function workCardTemplate(work) {
-  const statusLabels = { ativo: 'Ativo', andamento: 'Em andamento', concluido: 'Concluido' };
-  const hourly = Number(work.salario || 0) / Math.max(Number(work.horas || 1), 1);
+  const item = normalizeAcademicItem(work);
+  const statusLabels = { ativo: 'Pendente', andamento: 'Em andamento', concluido: 'Concluido' };
+  const kind = academicKind(item);
+  const icon = kind === 'prova' ? 'fa-file-pen' : kind === 'anotacao' ? 'fa-note-sticky' : 'fa-list-check';
   return `
     <article class="work-card">
       <div class="work-card-head">
         <div class="work-card-title">
-          <strong>${escapeHtml(work.nome)}</strong>
-          <span>${escapeHtml(work.tipo)} · desde ${escapeHtml(work.inicio)}</span>
+          <strong>${escapeHtml(item.nome)}</strong>
+          <span>${escapeHtml(item.disciplina || 'Sem materia')} · ${escapeHtml(item.inicio)}</span>
         </div>
         <div class="account-actions">
-          <button class="delete-button" data-edit-work="${work.id}" aria-label="Editar trabalho"><i class="fa-regular fa-pen-to-square"></i></button>
-          <button class="delete-button" data-delete="trabalhos" data-id="${work.id}" aria-label="Excluir trabalho"><i class="fa-regular fa-trash-can"></i></button>
+          <button class="delete-button" data-edit-work="${item.id}" aria-label="Editar item"><i class="fa-regular fa-pen-to-square"></i></button>
+          <button class="delete-button" data-delete="trabalhos" data-id="${item.id}" aria-label="Excluir item"><i class="fa-regular fa-trash-can"></i></button>
         </div>
       </div>
-      <div class="work-money">${formatMoney(work.salario)}</div>
+      <div class="work-money"><i class="fa-solid ${icon}"></i>${escapeHtml(item.tipo)}</div>
       <div class="work-metrics">
-        <span>${work.horas}h/mes</span>
-        <span>${formatMoney(hourly)}/hora</span>
+        <span>${statusLabels[item.status] || item.status}</span>
+        ${item.horas ? `<span>${item.horas}h de estudo</span>` : ''}
+        ${Number(item.salario || 0) ? `<span>Nota/peso ${Number(item.salario || 0)}</span>` : ''}
       </div>
-      <span class="badge">${statusLabels[work.status] || work.status}</span>
+      ${item.anotacao ? `<p class="work-note">${escapeHtml(item.anotacao)}</p>` : ''}
     </article>
   `;
 }
@@ -941,16 +959,18 @@ function openModal(type, editItem = null) {
 
   if (type === 'work') {
     const item = editItem || {};
-    title.textContent = editItem ? 'Editar trabalho' : 'Novo trabalho';
+    title.textContent = editItem ? 'Editar item da faculdade' : 'Novo item da faculdade';
     fields.innerHTML = `
-      <div class="form-section-title">Dados do trabalho</div>
-      ${field('nome', 'Nome', 'text', item.nome || 'Ex: Cliente X', true)}
-      ${field('tipo', 'Tipo', 'text', item.tipo || 'Freelancer', true)}
-      <label>Status<select name="status"><option value="ativo" ${item.status === 'ativo' ? 'selected' : ''}>Ativo</option><option value="andamento" ${item.status === 'andamento' ? 'selected' : ''}>Em andamento</option><option value="concluido" ${item.status === 'concluido' ? 'selected' : ''}>Concluido</option></select></label>
-      <div class="form-section-title">Renda e carga</div>
-      ${field('salario', 'Receita mensal', 'number', item.salario ?? '0', true)}
-      ${field('horas', 'Horas por mes', 'number', item.horas ?? '1', true)}
-      ${field('inicio', 'Inicio', 'date', item.inicio || today, true)}
+      <div class="form-section-title">Faculdade</div>
+      ${field('nome', 'Titulo', 'text', item.nome || 'Ex: Prova de calculo', true)}
+      <label>Tipo<select name="tipo"><option value="Prova" ${item.tipo === 'Prova' ? 'selected' : ''}>Prova</option><option value="Trabalho" ${item.tipo === 'Trabalho' ? 'selected' : ''}>Trabalho</option><option value="Anotacao" ${item.tipo === 'Anotacao' ? 'selected' : ''}>Anotacao</option></select></label>
+      ${field('disciplina', 'Materia', 'text', item.disciplina || item.area || 'Ex: Matematica', false)}
+      <label>Status<select name="status"><option value="ativo" ${item.status === 'ativo' ? 'selected' : ''}>Pendente</option><option value="andamento" ${item.status === 'andamento' ? 'selected' : ''}>Em andamento</option><option value="concluido" ${item.status === 'concluido' ? 'selected' : ''}>Concluido</option></select></label>
+      <div class="form-section-title">Prazo e detalhes</div>
+      ${field('inicio', 'Data ou prazo', 'date', item.inicio || today, true)}
+      ${field('horas', 'Horas de estudo', 'number', item.horas ?? '0', false)}
+      ${field('salario', 'Nota ou peso', 'number', item.salario ?? '0', false)}
+      <label>Anotacoes<textarea name="anotacao" rows="4">${escapeHtml(item.anotacao || item.descricao || '')}</textarea></label>
     `;
   }
 

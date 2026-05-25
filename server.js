@@ -410,11 +410,13 @@ function normalizeWithdrawal(item) {
 function normalizeWork(item) {
   return {
     id: item.id || crypto.randomUUID(),
-    nome: String(item.nome || 'Novo trabalho').trim(),
-    tipo: String(item.tipo || 'Freelancer').trim(),
+    nome: String(item.nome || 'Novo item').trim(),
+    tipo: String(item.tipo || 'Trabalho').trim(),
+    disciplina: String(item.disciplina || '').trim(),
+    anotacao: String(item.anotacao || '').trim(),
     status: ['ativo', 'andamento', 'concluido'].includes(item.status) ? item.status : 'andamento',
     salario: moneyValue(item.salario),
-    horas: parseDecimal(item.horas, 1),
+    horas: parseDecimal(item.horas, 0),
     inicio: item.inicio || new Date().toISOString().slice(0, 10)
   };
 }
@@ -459,7 +461,7 @@ function buildResumo(db) {
     metasAtivas: db.metas.length,
     metasConcluidas: db.metas.filter(m => Number(m.atual) >= Number(m.target)).length,
     trabalhosAtivos: db.trabalhos.filter(j => j.status !== 'concluido').length,
-    trabalhosAndamento: db.trabalhos.filter(j => j.status === 'andamento').length,
+    trabalhosAndamento: db.trabalhos.filter(j => j.status !== 'concluido').length,
     trabalhosRenda,
     trabalhosHoras,
     carteiraInvestimentos,

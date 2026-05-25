@@ -61,7 +61,7 @@
         <button class="nav-item active" data-page="overview"><i class="fa-solid fa-grip"></i><span>Visao geral</span></button>
         <button class="nav-item" data-page="finance"><i class="fa-regular fa-credit-card"></i><span>Financeiro</span></button>
         <button class="nav-item" data-page="goals"><i class="fa-regular fa-circle-dot"></i><span>Metas</span></button>
-        <button class="nav-item" data-page="work"><i class="fa-solid fa-briefcase"></i><span>Trabalhos</span></button>
+        <button class="nav-item" data-page="work"><i class="fa-solid fa-graduation-cap"></i><span>Faculdade</span></button>
       </nav>
 
       <button class="sidebar-account" id="accountButton" type="button" title="Conta">
@@ -134,9 +134,9 @@
               <small><span data-summary="metasConcluidas">0</span> concluidas</small>
             </button>
             <button class="metric-card" data-go="work">
-              <span>Trabalhos</span>
+              <span>Faculdade</span>
               <strong data-summary="trabalhosAtivos">0</strong>
-              <small><span data-summary="trabalhosAndamento">0</span> em andamento</small>
+              <small><span data-summary="trabalhosAndamento">0</span> tarefas pendentes</small>
             </button>
           </section>
 
@@ -172,7 +172,7 @@
             </article>
 
             <article class="panel">
-              <div class="panel-title">Trabalhos ativos</div>
+              <div class="panel-title">Faculdade</div>
               <div id="workPreview" class="stack"></div>
             </article>
           </section>
@@ -340,23 +340,23 @@
         <div class="view" id="view-work">
           <section class="section-head">
             <div>
-              <h2>Trabalhos</h2>
-              <p>Controle renda, horas, status e valor por hora.</p>
+              <h2>Faculdade</h2>
+              <p>Organize provas, trabalhos e anotacoes por materia.</p>
             </div>
-            <button class="primary-button" data-modal="work"><i class="fa-solid fa-plus"></i><span>Trabalho</span></button>
+            <button class="primary-button" data-modal="work"><i class="fa-solid fa-plus"></i><span>Item</span></button>
           </section>
           <section class="work-overview" id="workOverview"></section>
           <section class="work-board">
             <article>
-              <div class="panel-title">Ativos</div>
+              <div class="panel-title">Provas</div>
               <div id="activeWorkList" class="work-card-grid"></div>
             </article>
             <article>
-              <div class="panel-title">Em andamento</div>
+              <div class="panel-title">Trabalhos</div>
               <div id="pendingWorkList" class="work-card-grid"></div>
             </article>
             <article>
-              <div class="panel-title">Concluidos</div>
+              <div class="panel-title">Anotacoes</div>
               <div id="doneWorkList" class="work-card-grid"></div>
             </article>
           </section>
