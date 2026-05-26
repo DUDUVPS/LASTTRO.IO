@@ -252,6 +252,16 @@ button { border: 0; cursor: pointer; }
   color: var(--blue);
   background: rgba(74,158,255,.12);
   border: 1px solid rgba(74,158,255,.22);
+  overflow: hidden;
+}
+
+.account-avatar img,
+.profile-photo img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: inherit;
 }
 
 .account-copy {
@@ -281,8 +291,18 @@ button { border: 0; cursor: pointer; }
 }
 
 .sidebar.collapsed .sidebar-account {
+  width: 44px;
+  min-height: 44px;
   justify-content: center;
-  padding: 8px 0;
+  margin: auto auto 12px;
+  padding: 0;
+}
+
+.sidebar.collapsed .account-avatar {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
 }
 
 .sidebar.collapsed .account-chevron {
@@ -1414,6 +1434,64 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
 
 .settings-card {
   min-width: min(420px, calc(100vw - 32px));
+}
+
+.profile-settings {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 16px 16px 0;
+}
+
+.profile-photo-picker {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255,255,255,.03);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.profile-photo-picker:hover {
+  border-color: rgba(74,158,255,.35);
+  background: rgba(74,158,255,.08);
+}
+
+.profile-photo-picker span:last-child {
+  display: grid;
+  gap: 3px;
+}
+
+.profile-photo-picker small {
+  color: var(--subtle);
+}
+
+.profile-photo {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  color: var(--blue);
+  background: rgba(74,158,255,.12);
+  border: 1px solid rgba(74,158,255,.22);
+  overflow: hidden;
+}
+
+#profilePhotoInput {
+  display: none;
+}
+
+.profile-remove {
+  min-width: 46px;
+  height: auto;
+  align-self: stretch;
+  padding: 0 12px;
 }
 
 .settings-list {

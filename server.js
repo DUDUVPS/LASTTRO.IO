@@ -203,7 +203,8 @@ function normalizeUser(user = {}) {
   return {
     email,
     username: email,
-    passwordHash: user.passwordHash || ''
+    passwordHash: user.passwordHash || '',
+    avatar: typeof user.avatar === 'string' ? user.avatar : ''
   };
 }
 
@@ -221,7 +222,7 @@ function normalizeAuth(auth = {}) {
 }
 
 function publicUser(user) {
-  return { email: user.email, username: user.email };
+  return { email: user.email, username: user.email, avatar: user.avatar || '' };
 }
 
 function createSession(email) {
@@ -521,9 +522,12 @@ async function handleApi(req, res, pathname) {
 
     let user = db.auth.users.find(item => item.email === email);
     if (!user) {
-      user = { email, username: email, passwordHash: `google:${profile.sub || crypto.randomUUID()}` };
+      user = { email, username: email, passwordHash: `google:${profile.sub || crypto.randomUUID()}`, avatar: profile.picture || '' };
       db.auth.users.push(user);
       db.accountsData[email] = blankUserData();
+      await writeDb(db);
+    } else if (!user.avatar && profile.picture) {
+      user.avatar = profile.picture;
       await writeDb(db);
     }
 
@@ -551,7 +555,7 @@ async function handleApi(req, res, pathname) {
     if (db.auth.users.some(user => user.email === email)) {
       return send(res, 409, { error: 'Email ja cadastrado' });
     }
-    const user = { email, username: email, passwordHash: hashPassword(password) };
+    const user = { email, username: email, passwordHash: hashPassword(password), avatar: '' };
     db.auth.users.push(user);
     db.accountsData[email] = blankUserData();
     await writeDb(db);
@@ -588,10 +592,25 @@ async function handleApi(req, res, pathname) {
   }
 
   const userEmail = getSessionUser(req);
+  const currentUser = db.auth.users.find(item => item.email === userEmail);
   const data = getUserData(db, userEmail);
 
+  if (req.method === 'POST' && pathname === '/api/profile') {
+    const body = await readBody(req);
+    const avatar = String(body.avatar || '');
+    if (!currentUser) return send(res, 404, { error: 'Usuario nao encontrado' });
+    const isEmpty = avatar === '';
+    const isValidImage = /^data:image\/(png|jpeg|webp);base64,[a-z0-9+/=]+$/i.test(avatar) || /^https:\/\/.+/i.test(avatar);
+    if (!isEmpty && (!isValidImage || avatar.length > 700_000)) {
+      return send(res, 400, { error: 'Imagem invalida ou muito grande' });
+    }
+    currentUser.avatar = avatar;
+    await writeDb(db);
+    return send(res, 200, { user: publicUser(currentUser) });
+  }
+
   if (req.method === 'GET' && pathname === '/api/dashboard') {
-    return send(res, 200, { ...data, user: publicUser({ email: userEmail }), resumo: buildResumo(data) });
+    return send(res, 200, { ...data, user: publicUser(currentUser || { email: userEmail }), resumo: buildResumo(data) });
   }
 
   if (req.method === 'GET' && ['transacoes', 'metas', 'trabalhos'].includes(collection)) {

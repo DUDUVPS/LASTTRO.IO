@@ -96,6 +96,10 @@ async function api(path, options = {}) {
 
 async function loadDashboard() {
   state.data = await api('/api/dashboard');
+  if (state.data.user) {
+    state.user = state.data.user;
+    localStorage.setItem('lasttroUser', JSON.stringify(state.user));
+  }
   renderAll();
 }
 
@@ -258,8 +262,87 @@ async function logoutFromSettings() {
 
 function renderAccountUser() {
   const label = qs('#accountEmail');
-  if (!label) return;
-  label.textContent = state.user?.email || state.user?.username || 'sem login';
+  if (label) label.textContent = state.user?.email || state.user?.username || 'sem login';
+  renderAccountAvatar();
+}
+
+function renderAccountAvatar() {
+  const avatar = state.user?.avatar || '';
+  [qs('#accountAvatar'), qs('#settingsAvatar')].forEach(element => {
+    if (!element) return;
+    element.replaceChildren();
+    if (avatar) {
+      const image = document.createElement('img');
+      image.src = avatar;
+      image.alt = 'Foto da conta';
+      element.appendChild(image);
+      return;
+    }
+    const icon = document.createElement('i');
+    icon.className = 'fa-regular fa-user';
+    element.appendChild(icon);
+  });
+}
+
+function resizeProfileImage(file) {
+  return new Promise((resolve, reject) => {
+    if (!file.type.match(/^image\/(png|jpeg|webp)$/)) {
+      reject(new Error('Formato de imagem invalido.'));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => {
+        const size = 420;
+        const scale = Math.min(size / image.width, size / image.height, 1);
+        const width = Math.round(image.width * scale);
+        const height = Math.round(image.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d');
+        context.drawImage(image, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      image.onerror = () => reject(new Error('Nao foi possivel carregar a imagem.'));
+      image.src = reader.result;
+    };
+    reader.onerror = () => reject(new Error('Nao foi possivel ler a imagem.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function saveProfileAvatar(avatar) {
+  const payload = await api('/api/profile', {
+    method: 'POST',
+    body: JSON.stringify({ avatar })
+  });
+  state.user = payload.user;
+  localStorage.setItem('lasttroUser', JSON.stringify(state.user));
+  renderAccountUser();
+}
+
+async function changeProfilePhoto(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    const avatar = await resizeProfileImage(file);
+    await saveProfileAvatar(avatar);
+  } catch (error) {
+    alert(safeApiError(error.message) || error.message || 'Nao foi possivel salvar a foto.');
+  } finally {
+    event.target.value = '';
+  }
+}
+
+async function removeProfilePhoto() {
+  try {
+    await saveProfileAvatar('');
+  } catch (error) {
+    alert(safeApiError(error.message) || 'Nao foi possivel remover a foto.');
+  }
 }
 
 async function initAuth() {
@@ -1179,6 +1262,8 @@ function bindEvents() {
   qs('#closeSettingsButton')?.addEventListener('click', closeSettings);
   qs('#settingsLogoutButton')?.addEventListener('click', logoutFromSettings);
   qs('#settingsChangePasswordButton')?.addEventListener('click', openPasswordSettings);
+  qs('#profilePhotoInput')?.addEventListener('change', changeProfilePhoto);
+  qs('#removeProfilePhotoButton')?.addEventListener('click', removeProfilePhoto);
   qsa('.nav-item').forEach(item => item.addEventListener('click', () => setPage(item.dataset.page)));
   qsa('[data-go]').forEach(item => item.addEventListener('click', () => setPage(item.dataset.go)));
   qsa('[data-modal]').forEach(button => button.addEventListener('click', () => openModal(button.dataset.modal)));
