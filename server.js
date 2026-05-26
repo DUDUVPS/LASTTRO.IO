@@ -1,4 +1,4 @@
-﻿const http = require('http');
+const http = require('http');
 const fs = require('fs/promises');
 const path = require('path');
 const crypto = require('crypto');
@@ -653,7 +653,7 @@ async function handleApi(req, res, pathname) {
     const body = await readBody(req);
     const valor = Math.max(0, moneyValue(body.valor));
     if (valor <= 0) return send(res, 400, { error: 'Valor invalido' });
-    if (valor > data.banco.saldo) return send(res, 400, { error: 'Saldo insuficiente no Dudu Bank' });
+    if (valor > data.banco.saldo) return send(res, 400, { error: 'Saldo insuficiente no Lastro Bank' });
     const retirada = {
       id: crypto.randomUUID(),
       valor,

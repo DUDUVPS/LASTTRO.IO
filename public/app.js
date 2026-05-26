@@ -844,7 +844,7 @@ function bankWithdrawalTemplate(item) {
       <div class="card-main">
         <strong>Retirada de ${formatMoney(item.valor)}</strong>
         <span>${escapeHtml(item.data)} · juros de ${formatMoney(item.juros)} · devolver ${formatMoney(item.totalDevolver)}</span>
-        <span class="card-note">${isOpen ? 'Em aberto no Dudu Bank' : `Devolvido em ${escapeHtml(item.dataDevolucao || '')}`}</span>
+        <span class="card-note">${isOpen ? 'Em aberto no Lastro Bank' : `Devolvido em ${escapeHtml(item.dataDevolucao || '')}`}</span>
       </div>
       <span class="badge">${isOpen ? 'Aberto' : 'Devolvido'}</span>
       ${isOpen ? `<button class="pill-button" data-bank-return="${item.id}"><i class="fa-solid fa-rotate-left"></i><span>Devolver</span></button>` : '<span></span>'}
@@ -1017,12 +1017,12 @@ function openModal(type, editItem = null) {
   }
 
   if (type === 'bankDeposit') {
-    title.textContent = 'Guardar no Dudu Bank';
+    title.textContent = 'Guardar no Lastro Bank';
     fields.innerHTML = `${field('valor', 'Valor para guardar', 'number', '0', true)}`;
   }
 
   if (type === 'bankWithdraw') {
-    title.textContent = 'Retirar do Dudu Bank';
+    title.textContent = 'Retirar do Lastro Bank';
     fields.innerHTML = `${field('valor', 'Valor da retirada', 'number', '0', true)}`;
   }
 
