@@ -218,6 +218,7 @@ button { border: 0; cursor: pointer; }
   gap: 10px;
   margin: auto 8px 12px;
   padding: 8px;
+  width: calc(100% - 16px);
   border-radius: 8px;
   color: var(--text);
   background: rgba(255,255,255,.03);
@@ -243,6 +244,7 @@ button { border: 0; cursor: pointer; }
 }
 
 .account-copy {
+  flex: 1;
   min-width: 0;
   display: grid;
   gap: 2px;
@@ -253,7 +255,7 @@ button { border: 0; cursor: pointer; }
 }
 
 .account-copy small {
-  max-width: 152px;
+  max-width: 126px;
   overflow: hidden;
   color: var(--subtle);
   font-size: 11px;
@@ -261,9 +263,37 @@ button { border: 0; cursor: pointer; }
   white-space: nowrap;
 }
 
+.account-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.account-quick-actions button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--muted);
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--line);
+}
+
+.account-quick-actions button:hover {
+  color: var(--text);
+  border-color: rgba(74,158,255,.35);
+  background: rgba(74,158,255,.12);
+}
+
 .sidebar.collapsed .sidebar-account {
   justify-content: center;
   padding: 8px 0;
+}
+
+.sidebar.collapsed .account-quick-actions {
+  display: none;
 }
 
 .sidebar-toggle {
@@ -1387,6 +1417,60 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
 .dialog-head, .dialog-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; border-bottom: 1px solid var(--line); }
 .dialog-actions { border-top: 1px solid var(--line); border-bottom: 0; justify-content: flex-end; }
 .dialog-head h3 { margin: 0; font-family: Rajdhani, sans-serif; font-size: 24px; }
+
+.settings-card {
+  min-width: min(420px, calc(100vw - 32px));
+}
+
+.settings-list {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+.settings-row {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.03);
+  color: var(--text);
+  text-align: left;
+}
+
+.settings-row:hover {
+  border-color: rgba(74,158,255,.35);
+  background: rgba(74,158,255,.08);
+}
+
+.settings-row i {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  color: var(--blue);
+  background: rgba(74,158,255,.12);
+}
+
+.settings-row span {
+  display: grid;
+  gap: 3px;
+}
+
+.settings-row small {
+  color: var(--subtle);
+}
+
+.settings-row.danger i {
+  color: var(--red);
+  background: rgba(255,92,98,.12);
+}
+
 .form-grid { display: grid; gap: 12px; padding: 16px; }
 .form-section-title {
   color: var(--blue);
@@ -1444,6 +1528,7 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
   .sidebar.collapsed { width: var(--sidebar); flex-basis: var(--sidebar); }
   .sidebar-toggle { display: none; }
   .sidebar.collapsed .brand-copy, .sidebar.collapsed .nav-item span, .sidebar.collapsed .account-copy { opacity: 1; width: auto; }
+  .sidebar.collapsed .account-quick-actions { display: flex; }
   .main { min-height: 100vh; }
   .menu-button { display: inline-flex !important; }
   .content { padding: 16px; }

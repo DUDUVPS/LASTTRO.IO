@@ -65,13 +65,17 @@
         <button class="nav-item" data-page="work"><i class="fa-solid fa-graduation-cap"></i><span>Faculdade</span></button>
       </nav>
 
-      <button class="sidebar-account" id="accountButton" type="button" title="Conta">
+      <div class="sidebar-account" id="accountButton" title="Conta">
         <span class="account-avatar"><i class="fa-regular fa-user"></i></span>
         <span class="account-copy">
           <strong>Conta</strong>
           <small id="accountEmail">sem login</small>
         </span>
-      </button>
+        <span class="account-quick-actions">
+          <button id="siteSettingsButton" type="button" aria-label="Configuracoes do site"><i class="fa-solid fa-gear"></i></button>
+          <button id="sidebarLogoutButton" type="button" aria-label="Sair"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+        </span>
+      </div>
 
       <button class="sidebar-toggle" id="sidebarToggle" aria-label="Recolher menu">
         <i class="fa-solid fa-chevron-left"></i>
@@ -380,6 +384,29 @@
         <button class="primary-button" value="default"><i class="fa-solid fa-check"></i><span>Salvar</span></button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="settingsDialog">
+    <div class="dialog-card settings-card">
+      <div class="dialog-head">
+        <h3>Configuracoes</h3>
+        <button class="icon-button" id="closeSettingsButton" type="button" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="settings-list">
+        <a href="/" class="settings-row">
+          <i class="fa-solid fa-house"></i>
+          <span><strong>Pagina inicial</strong><small>Ver apresentacao do projeto</small></span>
+        </a>
+        <button class="settings-row" id="settingsChangePasswordButton" type="button">
+          <i class="fa-solid fa-key"></i>
+          <span><strong>Trocar senha</strong><small>Sair e abrir tela de troca de senha</small></span>
+        </button>
+        <button class="settings-row danger" id="settingsLogoutButton" type="button">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          <span><strong>Sair</strong><small>Encerrar sessao atual</small></span>
+        </button>
+      </div>
+    </div>
   </dialog>
 
   <script src="/app.js"></script>

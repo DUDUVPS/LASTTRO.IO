@@ -237,6 +237,25 @@ async function logout() {
   showLogin('');
 }
 
+function openSettings() {
+  qs('#settingsDialog')?.showModal();
+}
+
+function closeSettings() {
+  qs('#settingsDialog')?.close();
+}
+
+async function openPasswordSettings() {
+  closeSettings();
+  await logout();
+  setAuthMode('password');
+}
+
+async function logoutFromSettings() {
+  closeSettings();
+  await logout();
+}
+
 function renderAccountUser() {
   const label = qs('#accountEmail');
   if (!label) return;
@@ -1157,6 +1176,11 @@ function bindEvents() {
   qs('#googleLoginButton').addEventListener('click', loginWithGoogle);
   qsa('.auth-tab').forEach(button => button.addEventListener('click', () => setAuthMode(button.dataset.authMode)));
   qs('#logoutButton').addEventListener('click', logout);
+  qs('#sidebarLogoutButton')?.addEventListener('click', logout);
+  qs('#siteSettingsButton')?.addEventListener('click', openSettings);
+  qs('#closeSettingsButton')?.addEventListener('click', closeSettings);
+  qs('#settingsLogoutButton')?.addEventListener('click', logoutFromSettings);
+  qs('#settingsChangePasswordButton')?.addEventListener('click', openPasswordSettings);
   qsa('.nav-item').forEach(item => item.addEventListener('click', () => setPage(item.dataset.page)));
   qsa('[data-go]').forEach(item => item.addEventListener('click', () => setPage(item.dataset.go)));
   qsa('[data-modal]').forEach(button => button.addEventListener('click', () => openModal(button.dataset.modal)));
