@@ -1175,9 +1175,7 @@ function bindEvents() {
   qs('#loginForm').addEventListener('submit', submitLogin);
   qs('#googleLoginButton').addEventListener('click', loginWithGoogle);
   qsa('.auth-tab').forEach(button => button.addEventListener('click', () => setAuthMode(button.dataset.authMode)));
-  qs('#logoutButton').addEventListener('click', logout);
-  qs('#sidebarLogoutButton')?.addEventListener('click', logout);
-  qs('#siteSettingsButton')?.addEventListener('click', openSettings);
+  qs('#accountButton')?.addEventListener('click', openSettings);
   qs('#closeSettingsButton')?.addEventListener('click', closeSettings);
   qs('#settingsLogoutButton')?.addEventListener('click', logoutFromSettings);
   qs('#settingsChangePasswordButton')?.addEventListener('click', openPasswordSettings);
@@ -1206,7 +1204,6 @@ function bindEvents() {
     renderFinance();
   });
 
-  qs('#refreshButton').addEventListener('click', loadDashboard);
   qs('#sidebarToggle').addEventListener('click', () => qs('#sidebar').classList.toggle('collapsed'));
   qs('#menuButton').addEventListener('click', () => {
     qs('#sidebar').classList.add('mobile-open');

@@ -24,7 +24,10 @@ body {
   margin: 0;
   min-height: 100vh;
   overflow: hidden;
-  background: var(--bg);
+  background:
+    radial-gradient(circle at 20% 18%, rgba(74,158,255,.18), transparent 30%),
+    radial-gradient(circle at 78% 72%, rgba(46,204,138,.12), transparent 34%),
+    var(--bg);
   color: var(--text);
   font-family: Inter, system-ui, sans-serif;
 }
@@ -145,7 +148,14 @@ button { border: 0; cursor: pointer; }
 
 .login-link:hover { color: var(--green); }
 
-.app { display: flex; height: 100vh; }
+.app {
+  display: flex;
+  height: 100vh;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(74,158,255,.18), transparent 30%),
+    radial-gradient(circle at 78% 72%, rgba(46,204,138,.12), transparent 34%),
+    var(--bg);
+}
 .app.locked { visibility: hidden; }
 
 .sidebar {
@@ -154,7 +164,8 @@ button { border: 0; cursor: pointer; }
   flex: 0 0 var(--sidebar);
   display: flex;
   flex-direction: column;
-  background: #11110f;
+  background: rgba(17,17,15,.88);
+  backdrop-filter: blur(18px);
   border-right: 1px solid var(--line);
   transition: width .22s ease, flex-basis .22s ease;
   z-index: 5;
@@ -263,28 +274,10 @@ button { border: 0; cursor: pointer; }
   white-space: nowrap;
 }
 
-.account-quick-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
-}
-
-.account-quick-actions button {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border-radius: 8px;
-  color: var(--muted);
-  background: rgba(255,255,255,.04);
-  border: 1px solid var(--line);
-}
-
-.account-quick-actions button:hover {
-  color: var(--text);
-  border-color: rgba(74,158,255,.35);
-  background: rgba(74,158,255,.12);
+.account-chevron {
+  margin-left: auto;
+  color: var(--subtle);
+  font-size: 12px;
 }
 
 .sidebar.collapsed .sidebar-account {
@@ -292,7 +285,7 @@ button { border: 0; cursor: pointer; }
   padding: 8px 0;
 }
 
-.sidebar.collapsed .account-quick-actions {
+.sidebar.collapsed .account-chevron {
   display: none;
 }
 
@@ -319,7 +312,8 @@ button { border: 0; cursor: pointer; }
   align-items: center;
   gap: 14px;
   padding: 0 24px;
-  background: #11110f;
+  background: rgba(17,17,15,.72);
+  backdrop-filter: blur(18px);
   border-bottom: 1px solid var(--line);
 }
 
@@ -1528,7 +1522,7 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
   .sidebar.collapsed { width: var(--sidebar); flex-basis: var(--sidebar); }
   .sidebar-toggle { display: none; }
   .sidebar.collapsed .brand-copy, .sidebar.collapsed .nav-item span, .sidebar.collapsed .account-copy { opacity: 1; width: auto; }
-  .sidebar.collapsed .account-quick-actions { display: flex; }
+  .sidebar.collapsed .account-chevron { display: block; }
   .main { min-height: 100vh; }
   .menu-button { display: inline-flex !important; }
   .content { padding: 16px; }
