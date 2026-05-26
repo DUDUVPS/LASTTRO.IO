@@ -720,7 +720,7 @@ async function handleApi(req, res, pathname) {
 }
 
 async function serveStatic(req, res, pathname) {
-  const requested = pathname === '/' ? '/index.html' : pathname;
+  const requested = pathname === '/' ? '/index.html' : pathname === '/apresentacao' ? '/apresentacao.html' : pathname;
   const filePath = path.normalize(path.join(PUBLIC_DIR, requested));
   if (!filePath.startsWith(PUBLIC_DIR)) return send(res, 403, 'Acesso negado', 'text/plain; charset=utf-8');
 

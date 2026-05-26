@@ -136,6 +136,15 @@ button { border: 0; cursor: pointer; }
 
 .form-error.success { color: var(--green); }
 
+.login-link {
+  color: var(--blue);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.login-link:hover { color: var(--green); }
+
 .app { display: flex; height: 100vh; }
 .app.locked { visibility: hidden; }
 
