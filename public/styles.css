@@ -1575,6 +1575,40 @@ button { border: 0; cursor: pointer; }
   background: var(--panel);
 }
 
+.inbox-card {
+  align-content: start;
+}
+
+.gmail-list {
+  display: grid;
+  gap: 10px;
+  max-height: 440px;
+  overflow: auto;
+}
+
+.gmail-message {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255,255,255,.03);
+}
+
+.gmail-message strong {
+  font-size: 14px;
+}
+
+.gmail-message span,
+.gmail-message small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .email-card.primary {
   border-color: rgba(74,158,255,.24);
   background: linear-gradient(135deg, rgba(74,158,255,.12), rgba(46,204,138,.05)), var(--panel);

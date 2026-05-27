@@ -11,6 +11,8 @@ const state = {
   investmentChart: null,
   modalType: null,
   editing: null,
+  gmailStatus: null,
+  gmailMessages: [],
   authMode: 'login',
   authToken: localStorage.getItem('lasttroToken') || '',
   user: JSON.parse(localStorage.getItem('lasttroUser') || 'null')
@@ -103,7 +105,24 @@ async function loadDashboard() {
     state.user = state.data.user;
     localStorage.setItem('lasttroUser', JSON.stringify(state.user));
   }
+  await loadGmailStatus();
   renderAll();
+}
+
+async function loadGmailStatus() {
+  try {
+    state.gmailStatus = await api('/api/gmail/status');
+    if (state.gmailStatus.connected) {
+      const payload = await api('/api/gmail/messages');
+      state.gmailMessages = payload.messages || [];
+    } else {
+      state.gmailMessages = [];
+    }
+  } catch (error) {
+    console.warn(error);
+    state.gmailStatus = { connected: false, error: safeApiError(error.message) || 'Nao foi possivel conectar ao Gmail' };
+    state.gmailMessages = [];
+  }
 }
 
 function setSession(payload) {
@@ -1522,14 +1541,51 @@ function renderEmail() {
   const email = state.user?.email || state.user?.username || 'sem login';
   const label = qs('#gmailAccount');
   if (label) label.textContent = email;
+  const connected = Boolean(state.gmailStatus?.connected);
+  const status = qs('#gmailStatusText');
+  if (status) status.textContent = connected ? 'Gmail conectado e pronto para sincronizar.' : (state.gmailStatus?.error || 'Clique em conectar para liberar o Gmail.');
+  const button = qs('#connectGmailButton');
+  if (button) button.innerHTML = connected
+    ? '<i class="fa-solid fa-check"></i><span>Gmail conectado</span>'
+    : '<i class="fa-brands fa-google"></i><span>Conectar Gmail</span>';
+  const list = qs('#gmailMessages');
+  if (list) {
+    list.innerHTML = state.gmailMessages.map(message => `
+      <article class="gmail-message">
+        <strong>${escapeHtml(message.subject)}</strong>
+        <span>${escapeHtml(message.from)}</span>
+        <small>${escapeHtml(message.snippet || '')}</small>
+      </article>
+    `).join('') || emptyTemplate(connected ? 'Nenhum email encontrado.' : 'Conecte o Gmail para ver sua caixa de entrada.');
+  }
 }
 
-function openGmailCompose() {
-  const to = encodeURIComponent(qs('#gmailTo')?.value || '');
-  const subject = encodeURIComponent(qs('#gmailSubject')?.value || '');
-  const body = encodeURIComponent(qs('#gmailBody')?.value || '');
-  window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`, '_blank', 'noopener,noreferrer');
-  showToast('Gmail aberto', 'A mensagem foi preparada em uma nova janela do Gmail.');
+async function connectGmail() {
+  const payload = await api('/api/auth/gmail-url');
+  window.location.href = payload.url;
+}
+
+async function refreshGmail() {
+  await loadGmailStatus();
+  renderEmail();
+  showToast('Gmail atualizado', 'A caixa de entrada foi sincronizada.');
+}
+
+async function sendGmail() {
+  const payload = {
+    to: qs('#gmailTo')?.value || '',
+    subject: qs('#gmailSubject')?.value || '',
+    body: qs('#gmailBody')?.value || ''
+  };
+  try {
+    await api('/api/gmail/send', { method: 'POST', body: JSON.stringify(payload) });
+    qs('#gmailTo').value = '';
+    qs('#gmailSubject').value = '';
+    qs('#gmailBody').value = '';
+    showToast('Email enviado', 'Mensagem enviada pelo Gmail conectado.');
+  } catch (error) {
+    showToast('Erro no Gmail', safeApiError(error.message) || 'Conecte o Gmail antes de enviar.');
+  }
 }
 
 function bindEvents() {
@@ -1542,7 +1598,9 @@ function bindEvents() {
   qs('#settingsChangePasswordButton')?.addEventListener('click', openPasswordSettings);
   qs('#profilePhotoInput')?.addEventListener('change', changeProfilePhoto);
   qs('#removeProfilePhotoButton')?.addEventListener('click', removeProfilePhoto);
-  qs('#openGmailCompose')?.addEventListener('click', openGmailCompose);
+  qs('#connectGmailButton')?.addEventListener('click', connectGmail);
+  qs('#refreshGmailButton')?.addEventListener('click', refreshGmail);
+  qs('#sendGmailButton')?.addEventListener('click', sendGmail);
   qs('#notificationButton')?.addEventListener('click', () => qs('#notificationPopout')?.classList.toggle('show'));
   qsa('.nav-item').forEach(item => item.addEventListener('click', () => setPage(item.dataset.page)));
   qsa('[data-go]').forEach(item => item.addEventListener('click', () => setPage(item.dataset.go)));

@@ -155,7 +155,12 @@ function hashPassword(password) {
 
 function getBearerToken(req) {
   const header = req.headers.authorization || '';
-  return header.startsWith('Bearer ') ? header.slice(7) : '';
+  if (header.startsWith('Bearer ')) return header.slice(7);
+  try {
+    return new URL(req.url, 'http://localhost').searchParams.get('token') || '';
+  } catch {
+    return '';
+  }
 }
 
 function isAuthenticated(req) {
@@ -204,7 +209,8 @@ function normalizeUser(user = {}) {
     email,
     username: email,
     passwordHash: user.passwordHash || '',
-    avatar: typeof user.avatar === 'string' ? user.avatar : ''
+    avatar: typeof user.avatar === 'string' ? user.avatar : '',
+    gmail: user.gmail && typeof user.gmail === 'object' ? user.gmail : null
   };
 }
 
@@ -222,7 +228,7 @@ function normalizeAuth(auth = {}) {
 }
 
 function publicUser(user) {
-  return { email: user.email, username: user.email, avatar: user.avatar || '' };
+  return { email: user.email, username: user.email, avatar: user.avatar || '', gmailConnected: Boolean(user.gmail?.refreshToken || user.gmail?.accessToken) };
 }
 
 function createSession(email) {
@@ -241,22 +247,23 @@ function signValue(value) {
   return crypto.createHmac('sha256', secret).update(value).digest('base64url');
 }
 
-function createOauthState() {
+function createOauthState(extra = {}) {
   const payload = Buffer.from(JSON.stringify({
     nonce: crypto.randomUUID(),
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    ...extra
   })).toString('base64url');
   return `${payload}.${signValue(payload)}`;
 }
 
 function verifyOauthState(state) {
   const [payload, signature] = String(state || '').split('.');
-  if (!payload || !signature || signature !== signValue(payload)) return false;
+  if (!payload || !signature || signature !== signValue(payload)) return null;
   try {
     const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
-    return Date.now() - Number(data.createdAt || 0) < 10 * 60 * 1000;
+    return Date.now() - Number(data.createdAt || 0) < 10 * 60 * 1000 ? data : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -314,6 +321,46 @@ function normalizeTransaction(item) {
     recorrente: item.recorrente === true || item.recorrente === 'true',
     icon: item.icon || (tipo === 'entrada' ? 'fa-coins' : 'fa-receipt')
   };
+}
+
+async function refreshGmailAccessToken(user) {
+  if (!user?.gmail) throw new Error('Gmail nao conectado');
+  if (user.gmail.accessToken && Number(user.gmail.expiresAt || 0) > Date.now() + 60_000) {
+    return user.gmail.accessToken;
+  }
+  if (!user.gmail.refreshToken) throw new Error('Reconecte o Gmail');
+  const payload = await postForm('https://oauth2.googleapis.com/token', {
+    client_id: GOOGLE_CLIENT_ID,
+    client_secret: GOOGLE_CLIENT_SECRET,
+    refresh_token: user.gmail.refreshToken,
+    grant_type: 'refresh_token'
+  });
+  user.gmail.accessToken = payload.access_token;
+  user.gmail.expiresAt = Date.now() + Number(payload.expires_in || 3600) * 1000;
+  return user.gmail.accessToken;
+}
+
+async function gmailRequest(user, endpoint, options = {}) {
+  const token = await refreshGmailAccessToken(user);
+  const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/${endpoint}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    }
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error?.message || payload.error || 'Falha no Gmail');
+  return payload;
+}
+
+function gmailHeader(message, name) {
+  return message.payload?.headers?.find(header => header.name.toLowerCase() === name.toLowerCase())?.value || '';
+}
+
+function encodeBase64Url(value) {
+  return Buffer.from(value, 'utf8').toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
 function withDefaults(db) {
@@ -505,7 +552,8 @@ async function handleApi(req, res, pathname) {
     const callbackUrl = new URL(req.url, getBaseUrl(req));
     const code = callbackUrl.searchParams.get('code');
     const state = callbackUrl.searchParams.get('state');
-    if (!code || !verifyOauthState(state)) {
+    const stateData = verifyOauthState(state);
+    if (!code || !stateData) {
       return sendHtml(res, 400, 'Login Google invalido.');
     }
 
@@ -520,6 +568,21 @@ async function handleApi(req, res, pathname) {
     const profile = await getGoogleProfile(tokenPayload.access_token);
     const email = normalizeEmail(profile.email);
     if (!email || profile.email_verified === false) return sendHtml(res, 401, 'Email Google nao verificado.');
+
+    if (stateData.mode === 'gmail') {
+      const sessionEmail = normalizeEmail(stateData.email);
+      if (email !== sessionEmail) return sendHtml(res, 401, 'Conecte o Gmail da mesma conta logada no LASTTRO.');
+      const user = db.auth.users.find(item => item.email === email);
+      if (!user) return sendHtml(res, 404, 'Usuario nao encontrado.');
+      user.gmail = {
+        accessToken: tokenPayload.access_token,
+        refreshToken: tokenPayload.refresh_token || user.gmail?.refreshToken || '',
+        expiresAt: Date.now() + Number(tokenPayload.expires_in || 3600) * 1000,
+        scope: tokenPayload.scope || ''
+      };
+      await writeDb(db);
+      return sendHtml(res, 200, '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Gmail conectado</title></head><body><script>location.replace("/app?gmail=connected")</script></body></html>');
+    }
 
     let user = db.auth.users.find(item => item.email === email);
     if (!user) {
@@ -573,6 +636,26 @@ async function handleApi(req, res, pathname) {
     return send(res, 204, '');
   }
 
+  if (req.method === 'GET' && (pathname === '/api/auth/gmail' || pathname === '/api/auth/gmail-url')) {
+    if (!isAuthenticated(req)) return send(res, 401, { error: 'Login necessario' });
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+      return send(res, 500, { error: 'Google OAuth nao configurado no servidor' });
+    }
+    const state = createOauthState({ mode: 'gmail', email: getSessionUser(req) });
+    const redirectUri = `${getBaseUrl(req)}/api/auth/google/callback`;
+    const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+    url.searchParams.set('client_id', GOOGLE_CLIENT_ID);
+    url.searchParams.set('redirect_uri', redirectUri);
+    url.searchParams.set('response_type', 'code');
+    url.searchParams.set('scope', 'openid email profile https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send');
+    url.searchParams.set('state', state);
+    url.searchParams.set('access_type', 'offline');
+    url.searchParams.set('prompt', 'consent');
+    if (pathname === '/api/auth/gmail-url') return send(res, 200, { url: url.toString() });
+    res.writeHead(302, { Location: url.toString() });
+    return res.end();
+  }
+
   if (!isAuthenticated(req)) {
     return send(res, 401, { error: 'Login necessario' });
   }
@@ -595,6 +678,49 @@ async function handleApi(req, res, pathname) {
   const userEmail = getSessionUser(req);
   const currentUser = db.auth.users.find(item => item.email === userEmail);
   const data = getUserData(db, userEmail);
+
+  if (req.method === 'GET' && pathname === '/api/gmail/status') {
+    return send(res, 200, { connected: Boolean(currentUser?.gmail?.refreshToken || currentUser?.gmail?.accessToken), email: currentUser?.email || userEmail });
+  }
+
+  if (req.method === 'GET' && pathname === '/api/gmail/messages') {
+    if (!currentUser?.gmail) return send(res, 400, { error: 'Gmail nao conectado' });
+    const list = await gmailRequest(currentUser, 'messages?maxResults=10&q=in%3Ainbox');
+    const messages = await Promise.all((list.messages || []).slice(0, 10).map(async item => {
+      const message = await gmailRequest(currentUser, `messages/${item.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`);
+      return {
+        id: item.id,
+        from: gmailHeader(message, 'From'),
+        subject: gmailHeader(message, 'Subject') || '(sem assunto)',
+        date: gmailHeader(message, 'Date'),
+        snippet: message.snippet || ''
+      };
+    }));
+    await writeDb(db);
+    return send(res, 200, { messages });
+  }
+
+  if (req.method === 'POST' && pathname === '/api/gmail/send') {
+    if (!currentUser?.gmail) return send(res, 400, { error: 'Gmail nao conectado' });
+    const body = await readBody(req);
+    const to = String(body.to || '').trim();
+    const subject = String(body.subject || '').trim();
+    const text = String(body.body || '').trim();
+    if (!to || !subject || !text) return send(res, 400, { error: 'Preencha destinatario, assunto e mensagem' });
+    const raw = encodeBase64Url([
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      'Content-Type: text/plain; charset=utf-8',
+      '',
+      text
+    ].join('\r\n'));
+    const sent = await gmailRequest(currentUser, 'messages/send', {
+      method: 'POST',
+      body: JSON.stringify({ raw })
+    });
+    await writeDb(db);
+    return send(res, 201, { ok: true, id: sent.id });
+  }
 
   if (req.method === 'POST' && pathname === '/api/profile') {
     const body = await readBody(req);

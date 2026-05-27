@@ -386,27 +386,29 @@
             <div>
               <span>Gmail</span>
               <h2>Caixa de email</h2>
-              <p>Atalhos para acompanhar mensagens e escrever emails pelo Gmail.</p>
+              <p>Conecte sua conta Google para ler e enviar emails pelo LASTTRO.</p>
             </div>
-            <a class="primary-button" href="https://mail.google.com/mail/u/0/#inbox" target="_blank" rel="noreferrer"><i class="fa-brands fa-google"></i><span>Abrir Gmail</span></a>
+            <button class="primary-button" id="connectGmailButton" type="button"><i class="fa-brands fa-google"></i><span>Conectar Gmail</span></button>
           </section>
           <section class="email-grid">
             <article class="email-card primary">
-              <span>Conta conectada</span>
+              <span>Status</span>
               <strong id="gmailAccount">sem login</strong>
-              <small>O login atual usa Google OAuth. Para ler emails aqui dentro sera preciso liberar o escopo do Gmail depois.</small>
+              <small id="gmailStatusText">Gmail ainda nao conectado.</small>
             </article>
             <article class="email-compose-card">
-              <div class="panel-title">Novo email rapido</div>
+              <div class="panel-title">Enviar email</div>
               <label>Para<input id="gmailTo" type="email" placeholder="destino@gmail.com"></label>
               <label>Assunto<input id="gmailSubject" type="text" placeholder="Assunto"></label>
               <label>Mensagem<textarea id="gmailBody" rows="5" placeholder="Escreva sua mensagem"></textarea></label>
-              <button class="primary-button" id="openGmailCompose" type="button"><i class="fa-regular fa-paper-plane"></i><span>Escrever no Gmail</span></button>
+              <button class="primary-button" id="sendGmailButton" type="button"><i class="fa-regular fa-paper-plane"></i><span>Enviar pelo Gmail</span></button>
             </article>
-            <article class="email-card">
-              <span>Proximo passo</span>
-              <strong>Integracao completa</strong>
-              <small>Depois podemos ativar Gmail API para puxar caixa de entrada, marcar lidos e criar lembretes por email.</small>
+            <article class="email-card inbox-card">
+              <div class="list-header">
+                <span>Entrada</span>
+                <button class="pill-button" id="refreshGmailButton" type="button"><i class="fa-solid fa-rotate"></i><span>Atualizar</span></button>
+              </div>
+              <div id="gmailMessages" class="gmail-list"></div>
             </article>
           </section>
         </div>
