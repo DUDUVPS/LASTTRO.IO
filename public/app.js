@@ -24,7 +24,10 @@ const pages = {
 };
 
 const categoryColors = ['#ff7a45', '#00c4b4', '#8b6fff', '#f0b43c', '#4a9eff', '#2ecc8a'];
-const movementCategories = ['Alimentacao', 'Transporte', 'Saude', 'Moradia', 'Lazer', 'Educacao', 'Salario', 'Freela', 'Renda extra', 'Investimentos', 'Diversos'];
+const transactionCategories = {
+  entrada: ['Salario', 'Freela', 'Renda extra', 'Reembolso', 'Presente', 'Outros'],
+  saida: ['Alimentacao', 'Transporte', 'Saude', 'Educacao', 'Lazer', 'Casa', 'Pessoal', 'Outros']
+};
 const money = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',
@@ -68,7 +71,6 @@ function escapeHtml(value) {
 
 function transactionStyle(tipo) {
   if (tipo === 'entrada') return { color: 'var(--green)', bg: 'rgba(46,204,138,.12)' };
-  if (tipo === 'investimento') return { color: 'var(--blue)', bg: 'rgba(74,158,255,.12)' };
   return { color: 'var(--red)', bg: 'rgba(232,77,77,.12)' };
 }
 
@@ -475,9 +477,10 @@ function renderFinance() {
   renderBank();
 
   const list = qs('#transactionsList');
+  const movementTransactions = state.data.transacoes.filter(item => item.tipo !== 'investimento');
   const base = state.transactionFilter === 'todos'
-    ? state.data.transacoes
-    : state.data.transacoes.filter(item => item.tipo === state.transactionFilter);
+    ? movementTransactions
+    : movementTransactions.filter(item => item.tipo === state.transactionFilter);
   const search = state.transactionSearch.trim().toLowerCase();
   const filtered = base
     .filter(item => state.transactionCategory === 'todas' || item.cat === state.transactionCategory)
@@ -490,6 +493,56 @@ function renderFinance() {
   qs('#transactionsCount').textContent = `${filtered.length} ${filtered.length === 1 ? 'transacao' : 'transacoes'}`;
   qs('#transactionsTotal').textContent = formatMoney(total);
   list.innerHTML = filtered.map(transactionCardTemplate).join('') || emptyTemplate('Nenhuma transacao nesta categoria.');
+  renderMonthlyStatements();
+}
+
+function renderMonthlyStatements() {
+  const container = qs('#monthlyStatements');
+  if (!container) return;
+  const groups = state.data.transacoes.filter(item => item.tipo !== 'investimento').reduce((acc, item) => {
+    const month = String(item.data || '').slice(0, 7) || 'sem-data';
+    if (!acc[month]) acc[month] = { mes: month, entradas: 0, saidas: 0, total: 0, count: 0 };
+    const value = Number(item.val || 0);
+    if (item.tipo === 'entrada') acc[month].entradas += value;
+    if (item.tipo === 'saida') acc[month].saidas += Math.abs(value);
+    acc[month].total += value;
+    acc[month].count += 1;
+    return acc;
+  }, {});
+  const statements = Object.values(groups).sort((a, b) => b.mes.localeCompare(a.mes)).slice(0, 6);
+  container.innerHTML = statements.map(statementTemplate).join('') || emptyTemplate('Nenhuma movimentacao para gerar extrato.');
+}
+
+function statementTemplate(item) {
+  const label = item.mes === 'sem-data' ? 'Sem data' : new Date(`${item.mes}-02`).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  return `
+    <article class="statement-card">
+      <strong>${escapeHtml(label)}</strong>
+      <span>${item.count} ${item.count === 1 ? 'movimentacao' : 'movimentacoes'}</span>
+      <div><small>Entradas</small><b class="positive">${formatMoney(item.entradas)}</b></div>
+      <div><small>Saidas</small><b class="negative">${formatMoney(item.saidas)}</b></div>
+      <footer>Resultado ${formatMoney(item.total)}</footer>
+    </article>
+  `;
+}
+
+function updateTransactionCategoryOptions() {
+  const select = qs('#transactionCategorySelect');
+  if (!select) return;
+  const form = qs('#entityForm');
+  const type = new FormData(form).get('tipo') || 'saida';
+  const selected = select.value;
+  const categories = transactionCategories[type] || transactionCategories.saida;
+  select.innerHTML = categories.map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join('');
+  if (categories.includes(selected)) select.value = selected;
+  toggleCustomCategoryField();
+}
+
+function toggleCustomCategoryField() {
+  const select = qs('#transactionCategorySelect');
+  const customField = qs('#customCategoryField');
+  if (!select || !customField) return;
+  customField.classList.toggle('hidden', select.value !== 'Outros');
 }
 
 function renderMovementCategories(transactions) {
@@ -738,6 +791,35 @@ function renderWork() {
   qs('#activeWorkList').innerHTML = exams.map(workCardTemplate).join('') || emptyTemplate('Nenhuma prova cadastrada.');
   qs('#pendingWorkList').innerHTML = assignments.map(workCardTemplate).join('') || emptyTemplate('Nenhum trabalho cadastrado.');
   qs('#doneWorkList').innerHTML = notes.map(workCardTemplate).join('') || emptyTemplate('Nenhuma anotacao cadastrada.');
+  renderAcademicCalendar(works);
+}
+
+function renderAcademicCalendar(works) {
+  const container = qs('#academicCalendar');
+  if (!container) return;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const upcoming = works
+    .filter(item => item.inicio && item.status !== 'concluido')
+    .sort((a, b) => new Date(a.inicio) - new Date(b.inicio))
+    .slice(0, 8);
+  container.innerHTML = upcoming.map(item => {
+    const date = new Date(`${item.inicio}T00:00:00`);
+    const diff = Math.ceil((date - today) / 86400000);
+    const day = date.toLocaleDateString('pt-BR', { day: '2-digit' });
+    const month = date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+    const urgency = diff < 0 ? 'Atrasado' : diff === 0 ? 'Hoje' : `${diff} dias`;
+    return `
+      <article class="calendar-item ${diff <= 2 ? 'urgent' : ''}">
+        <div class="calendar-date"><strong>${day}</strong><span>${month}</span></div>
+        <div>
+          <strong>${escapeHtml(item.nome)}</strong>
+          <span>${escapeHtml(item.tipo)} · ${escapeHtml(item.disciplina || 'Sem materia')}</span>
+        </div>
+        <small>${escapeHtml(urgency)}</small>
+      </article>
+    `;
+  }).join('') || emptyTemplate('Sem prazos cadastrados.');
 }
 
 function academicKind(work) {
@@ -792,15 +874,17 @@ function workMiniTemplate(work) {
 
 function transactionCardTemplate(item) {
   const style = transactionStyle(item.tipo);
+  const recurring = item.recorrente ? ' recorrente' : '';
   return `
     <article class="list-card">
       <div class="card-icon" style="background:${style.bg};color:${style.color}"><i class="fa-solid ${escapeHtml(item.icon)}"></i></div>
       <div class="card-main">
         <strong>${escapeHtml(item.nome)}</strong>
         <span>${escapeHtml(item.cat)} · ${escapeHtml(item.data)} · ${escapeHtml(item.tipo)}</span>
-        <span class="card-note">${item.tipo === 'saida' ? 'Despesa lancada no fluxo mensal' : item.tipo === 'investimento' ? 'Valor separado para patrimonio' : 'Receita adicionada ao saldo'}</span>
+        <span class="card-note">${item.tipo === 'saida' ? 'Despesa lancada no fluxo mensal' : 'Receita adicionada ao saldo'}${recurring}</span>
       </div>
       <div class="card-value" style="color:${style.color}">${item.val > 0 ? '+' : '-'}${formatMoney(Math.abs(item.val))}</div>
+      <button class="delete-button" data-duplicate-transaction="${item.id}" aria-label="Duplicar transacao"><i class="fa-regular fa-copy"></i></button>
       <button class="delete-button" data-delete="transacoes" data-id="${item.id}" aria-label="Excluir transacao"><i class="fa-regular fa-trash-can"></i></button>
     </article>
   `;
@@ -1034,17 +1118,38 @@ function openModal(type, editItem = null) {
 
   if (type === 'transaction') {
     title.textContent = 'Nova transacao';
+    fields.className = 'form-grid transaction-editor-form';
     fields.innerHTML = `
-      ${field('nome', 'Nome', 'text', 'Ex: Mercado', true)}
-      <label>Categoria
-        <select name="cat">
-          ${movementCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('')}
-        </select>
-      </label>
-      <label>Tipo<select name="tipo"><option value="entrada">Entrada</option><option value="saida">Saida</option><option value="investimento">Investimento</option></select></label>
-      ${field('val', 'Valor', 'number', '0', true)}
-      ${field('data', 'Data', 'date', today, true)}
+      <div class="transaction-edit-hero">
+        <div>
+          <span>Movimentacao</span>
+          <strong>Nova transacao</strong>
+        </div>
+        <i class="fa-solid fa-right-left"></i>
+      </div>
+      <section class="transaction-edit-section">
+        <div class="transaction-type-toggle">
+          <label><input type="radio" name="tipo" value="entrada"><span><i class="fa-solid fa-arrow-up"></i>Entrada</span></label>
+          <label><input type="radio" name="tipo" value="saida" checked><span><i class="fa-solid fa-arrow-down"></i>Saida</span></label>
+        </div>
+        <div class="transaction-edit-grid">
+          ${field('nome', 'Nome', 'text', 'Ex: Mercado', true)}
+          ${field('val', 'Valor', 'number', '0', true)}
+          ${field('data', 'Data', 'date', today, true)}
+          <label>Categoria
+            <select name="catPreset" id="transactionCategorySelect"></select>
+          </label>
+          <label class="hidden" id="customCategoryField">Categoria personalizada
+            <input name="catCustom" type="text" placeholder="Escreva a categoria">
+          </label>
+          <label class="toggle-line">
+            <input name="recorrente" type="checkbox" value="true">
+            <span>Movimentacao recorrente</span>
+          </label>
+        </div>
+      </section>
     `;
+    updateTransactionCategoryOptions();
   }
 
   if (type === 'goal') {
@@ -1148,7 +1253,15 @@ function openModal(type, editItem = null) {
 
   if (type === 'bankWithdraw') {
     title.textContent = 'Retirar do Lastro Bank';
-    fields.innerHTML = `${field('valor', 'Valor da retirada', 'number', '0', true)}`;
+    fields.innerHTML = `
+      ${field('valor', 'Valor da retirada', 'number', '0', true)}
+      <div class="withdraw-simulation" id="withdrawSimulation">
+        <span>Simulacao com 4% de incentivo</span>
+        <div><small>Juros</small><strong id="withdrawInterest">R$ 0,00</strong></div>
+        <div><small>Total para devolver</small><strong id="withdrawTotal">R$ 0,00</strong></div>
+      </div>
+    `;
+    updateWithdrawSimulation();
   }
 
   dialog.showModal();
@@ -1169,6 +1282,12 @@ async function submitModal(event) {
   if (submitter?.value === 'cancel') return qs('#entityDialog').close();
 
   const data = Object.fromEntries(new FormData(form).entries());
+  if (state.modalType === 'transaction') {
+    data.cat = data.catPreset === 'Outros' ? (data.catCustom || 'Outros') : data.catPreset;
+    data.recorrente = data.recorrente === 'true';
+    delete data.catPreset;
+    delete data.catCustom;
+  }
   normalizeFormNumbers(data);
   if (state.modalType === 'account') {
     await submitBankAccount(data);
@@ -1277,6 +1396,29 @@ function editWork(id) {
   if (item) openModal('work', item);
 }
 
+function updateWithdrawSimulation() {
+  const input = qs('#formFields [name="valor"]');
+  const interest = qs('#withdrawInterest');
+  const total = qs('#withdrawTotal');
+  if (!input || !interest || !total) return;
+  const value = moneyValue(input.value || 0);
+  interest.textContent = formatMoney(value * 0.04);
+  total.textContent = formatMoney(value * 1.04);
+}
+
+async function duplicateTransaction(id) {
+  const item = state.data.transacoes.find(transaction => transaction.id === id);
+  if (!item) return;
+  const copy = {
+    ...item,
+    id: undefined,
+    nome: `${item.nome} copia`,
+    data: new Date().toISOString().slice(0, 10)
+  };
+  await api('/api/transacoes', { method: 'POST', body: JSON.stringify(copy) });
+  await loadDashboard();
+}
+
 function bindEvents() {
   qs('#loginForm').addEventListener('submit', submitLogin);
   qs('#googleLoginButton').addEventListener('click', loginWithGoogle);
@@ -1322,6 +1464,13 @@ function bindEvents() {
     qs('#overlay').classList.remove('show');
   });
   qs('#entityForm').addEventListener('submit', submitModal);
+  qs('#entityForm').addEventListener('change', event => {
+    if (event.target.name === 'tipo') updateTransactionCategoryOptions();
+    if (event.target.id === 'transactionCategorySelect') toggleCustomCategoryField();
+  });
+  qs('#entityForm').addEventListener('input', event => {
+    if (state.modalType === 'bankWithdraw' && event.target.name === 'valor') updateWithdrawSimulation();
+  });
 
   document.body.addEventListener('click', event => {
     const categoryButton = event.target.closest('[data-category]');
@@ -1346,6 +1495,12 @@ function bindEvents() {
     const editWorkButton = event.target.closest('[data-edit-work]');
     if (editWorkButton) {
       editWork(editWorkButton.dataset.editWork);
+      return;
+    }
+
+    const duplicateTransactionButton = event.target.closest('[data-duplicate-transaction]');
+    if (duplicateTransactionButton) {
+      duplicateTransaction(duplicateTransactionButton.dataset.duplicateTransaction);
       return;
     }
 

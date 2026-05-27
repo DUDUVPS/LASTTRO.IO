@@ -34,6 +34,7 @@ body {
 
 button, input, select { font: inherit; }
 button { border: 0; cursor: pointer; }
+.hidden { display: none !important; }
 
 .login-screen {
   position: fixed;
@@ -567,6 +568,46 @@ button { border: 0; cursor: pointer; }
   color: var(--subtle);
   font-size: 11px;
 }
+
+.statement-panel {
+  margin-top: 18px;
+}
+
+.statement-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.statement-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255,255,255,.03);
+}
+
+.statement-card > strong {
+  text-transform: capitalize;
+}
+
+.statement-card > span,
+.statement-card small,
+.statement-card footer {
+  color: var(--subtle);
+  font-size: 12px;
+}
+
+.statement-card div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.statement-card b.positive { color: var(--green); }
+.statement-card b.negative { color: var(--red); }
 
 .finance-tabs {
   display: grid;
@@ -1244,6 +1285,13 @@ button { border: 0; cursor: pointer; }
   gap: 16px;
 }
 
+.work-board .panel {
+  min-height: 360px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.015)),
+    var(--panel);
+}
+
 .work-card-grid {
   display: grid;
   gap: 10px;
@@ -1257,6 +1305,7 @@ button { border: 0; cursor: pointer; }
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.14);
 }
 
 .work-card:hover {
@@ -1320,6 +1369,68 @@ button { border: 0; cursor: pointer; }
   color: var(--muted);
   font-size: 12px;
   line-height: 1.5;
+}
+
+.academic-calendar-panel {
+  margin: 14px 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.academic-calendar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.calendar-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255,255,255,.03);
+}
+
+.calendar-item small {
+  grid-column: 2;
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .7px;
+}
+
+.calendar-item.urgent {
+  border-color: rgba(255,92,98,.28);
+  background: rgba(255,92,98,.06);
+}
+
+.calendar-date {
+  width: 46px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--text);
+  background: rgba(74,158,255,.12);
+  border: 1px solid rgba(74,158,255,.22);
+}
+
+.calendar-date strong {
+  font-family: Rajdhani, sans-serif;
+  font-size: 23px;
+  line-height: .8;
+}
+
+.calendar-date span,
+.calendar-item span {
+  color: var(--subtle);
+  font-size: 11px;
 }
 
 .bank-hero {
@@ -1640,6 +1751,130 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.transaction-editor-form {
+  gap: 14px;
+}
+
+.transaction-edit-hero,
+.withdraw-simulation {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid rgba(74,158,255,.22);
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(74,158,255,.12), rgba(46,204,138,.06)),
+    rgba(255,255,255,.03);
+}
+
+.transaction-edit-hero {
+  min-height: 78px;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.transaction-edit-hero span,
+.withdraw-simulation > span {
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.transaction-edit-hero strong {
+  display: block;
+  margin-top: 5px;
+  font-family: Rajdhani, sans-serif;
+  font-size: 30px;
+}
+
+.transaction-edit-hero i {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--green);
+  background: rgba(46,204,138,.12);
+}
+
+.transaction-edit-section {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255,255,255,.025);
+}
+
+.transaction-type-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.transaction-type-toggle input {
+  position: absolute;
+  opacity: 0;
+}
+
+.transaction-type-toggle span {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.03);
+  color: var(--muted);
+}
+
+.transaction-type-toggle input:checked + span {
+  color: var(--text);
+  border-color: rgba(74,158,255,.38);
+  background: rgba(74,158,255,.12);
+}
+
+.transaction-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.toggle-line {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #11110f;
+}
+
+.toggle-line input {
+  width: auto;
+  height: auto;
+}
+
+.withdraw-simulation div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.withdraw-simulation small {
+  color: var(--subtle);
+}
+
+.withdraw-simulation strong {
+  font-family: Rajdhani, sans-serif;
+  font-size: 24px;
+}
+
 .form-section-title {
   color: var(--blue);
   text-transform: uppercase;
@@ -1701,6 +1936,12 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
   .menu-button { display: inline-flex !important; }
   .content { padding: 16px; }
   .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board { grid-template-columns: 1fr; }
+  .statement-grid,
+  .academic-calendar,
+  .transaction-edit-grid,
+  .transaction-type-toggle {
+    grid-template-columns: 1fr;
+  }
   .dashboard-grid .panel:nth-child(1) { order: 1; }
   .dashboard-grid .panel:nth-child(3) { order: 2; }
   .dashboard-grid .panel:nth-child(2) { order: 3; }

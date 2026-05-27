@@ -301,7 +301,7 @@ function googleCallbackHtml(payload) {
 }
 
 function normalizeTransaction(item) {
-  const tipo = ['entrada', 'saida', 'investimento'].includes(item.tipo) ? item.tipo : 'saida';
+  const tipo = ['entrada', 'saida'].includes(item.tipo) ? item.tipo : 'saida';
   const rawVal = moneyValue(item.val);
   const val = tipo === 'saida' ? -Math.abs(rawVal) : Math.abs(rawVal);
   return {
@@ -311,7 +311,8 @@ function normalizeTransaction(item) {
     tipo,
     val,
     data: item.data || new Date().toISOString().slice(0, 10),
-    icon: item.icon || (tipo === 'entrada' ? 'fa-coins' : tipo === 'investimento' ? 'fa-chart-line' : 'fa-receipt')
+    recorrente: item.recorrente === true || item.recorrente === 'true',
+    icon: item.icon || (tipo === 'entrada' ? 'fa-coins' : 'fa-receipt')
   };
 }
 

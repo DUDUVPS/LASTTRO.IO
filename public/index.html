@@ -264,7 +264,6 @@
               <button class="filter active" data-filter="todos">Todos</button>
               <button class="filter" data-filter="entrada">Entradas</button>
               <button class="filter" data-filter="saida">Saidas</button>
-              <button class="filter" data-filter="investimento">Investimentos</button>
             </div>
 
             <section class="category-panel">
@@ -280,6 +279,14 @@
               <span id="transactionsTotal">R$0</span>
             </div>
             <div id="transactionsList" class="list"></div>
+
+            <section class="statement-panel">
+              <div class="list-header">
+                <span>Extratos mensais</span>
+                <span>Gerado automaticamente</span>
+              </div>
+              <div id="monthlyStatements" class="statement-grid"></div>
+            </section>
           </div>
 
           <div class="finance-panel" id="finance-tab-investments">
@@ -344,6 +351,13 @@
             <button class="primary-button" data-modal="work"><i class="fa-solid fa-plus"></i><span>Item</span></button>
           </section>
           <section class="work-overview" id="workOverview"></section>
+          <section class="academic-calendar-panel">
+            <div class="list-header">
+              <span>Calendario academico</span>
+              <span>Proximos prazos</span>
+            </div>
+            <div id="academicCalendar" class="academic-calendar"></div>
+          </section>
           <section class="work-board">
             <article>
               <div class="panel-title">Provas</div>
