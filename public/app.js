@@ -1029,6 +1029,8 @@ function openModal(type, editItem = null) {
   const title = qs('#dialogTitle');
   const fields = qs('#formFields');
   const today = new Date().toISOString().slice(0, 10);
+  dialog.classList.toggle('wide-dialog', type === 'account');
+  fields.className = 'form-grid';
 
   if (type === 'transaction') {
     title.textContent = 'Nova transacao';
@@ -1083,16 +1085,37 @@ function openModal(type, editItem = null) {
     const groupId = account?.groupId || card?.groupId || editItem?.groupId || newGroupId();
     state.editing = { type, accountId: account?.id || null, cardId: card?.id || null, groupId };
     title.textContent = editItem ? 'Editar banco' : 'Novo banco';
+    fields.className = 'form-grid account-editor-form';
     fields.innerHTML = `
-      <div class="form-section-title">Banco</div>
-      ${field('nome', 'Nome do banco', 'text', bankName || 'Ex: Nubank', true)}
-      ${field('bandeira', 'Identificacao', 'text', bankLabel || 'Ex: Conta principal', false)}
-      <div class="form-section-title">Debito</div>
-      ${field('saldo', 'Saldo', 'number', account?.saldo ?? '0', false)}
-      <div class="form-section-title">Credito</div>
-      ${field('limite', 'Limite', 'number', card?.limite ?? '0', false)}
-      ${field('usado', 'Fatura atual', 'number', card?.usado ?? '0', false)}
-      ${field('vencimento', 'Vencimento', 'number', card?.vencimento ?? '1', false)}
+      <div class="account-edit-hero">
+        <div>
+          <span>Banco</span>
+          <strong>${escapeHtml(bankName || 'Novo banco')}</strong>
+        </div>
+        <i class="fa-regular fa-credit-card"></i>
+      </div>
+
+      <section class="account-edit-section">
+        <div class="account-edit-title"><i class="fa-solid fa-building-columns"></i><span>Dados do banco</span></div>
+        <div class="account-edit-grid">
+          ${field('nome', 'Nome do banco', 'text', bankName || 'Ex: Nubank', true)}
+          ${field('bandeira', 'Identificacao', 'text', bankLabel || 'Ex: Conta principal', false)}
+        </div>
+      </section>
+
+      <section class="account-edit-section debit">
+        <div class="account-edit-title"><i class="fa-solid fa-arrow-down"></i><span>Debito</span></div>
+        ${field('saldo', 'Saldo disponivel', 'number', account?.saldo ?? '0', false)}
+      </section>
+
+      <section class="account-edit-section credit">
+        <div class="account-edit-title"><i class="fa-solid fa-credit-card"></i><span>Credito</span></div>
+        <div class="account-edit-grid three">
+          ${field('limite', 'Limite total', 'number', card?.limite ?? '0', false)}
+          ${field('usado', 'Fatura atual', 'number', card?.usado ?? '0', false)}
+          ${field('vencimento', 'Vencimento', 'number', card?.vencimento ?? '1', false)}
+        </div>
+      </section>
     `;
   }
 

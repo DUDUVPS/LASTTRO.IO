@@ -1427,6 +1427,11 @@ dialog {
   background: var(--panel);
   color: var(--text);
 }
+
+dialog.wide-dialog {
+  width: min(760px, calc(100vw - 32px));
+}
+
 dialog::backdrop { background: rgba(0,0,0,.62); }
 .dialog-head, .dialog-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; border-bottom: 1px solid var(--line); }
 .dialog-actions { border-top: 1px solid var(--line); border-bottom: 0; justify-content: flex-end; }
@@ -1544,6 +1549,97 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
 }
 
 .form-grid { display: grid; gap: 12px; padding: 16px; }
+.account-editor-form {
+  gap: 14px;
+}
+
+.account-edit-hero {
+  min-height: 86px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid rgba(74,158,255,.22);
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(74,158,255,.14), rgba(46,204,138,.08)),
+    rgba(255,255,255,.03);
+}
+
+.account-edit-hero span,
+.account-edit-title {
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.account-edit-hero strong {
+  display: block;
+  margin-top: 5px;
+  font-family: Rajdhani, sans-serif;
+  font-size: 34px;
+  line-height: 1;
+}
+
+.account-edit-hero i {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  color: var(--green);
+  background: rgba(46,204,138,.12);
+  border: 1px solid rgba(46,204,138,.22);
+  font-size: 20px;
+}
+
+.account-edit-section {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255,255,255,.025);
+}
+
+.account-edit-section.debit {
+  border-color: rgba(46,204,138,.18);
+}
+
+.account-edit-section.credit {
+  border-color: rgba(74,158,255,.18);
+}
+
+.account-edit-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-edit-title i {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  color: var(--text);
+  background: rgba(255,255,255,.06);
+}
+
+.account-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.account-edit-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .form-section-title {
   color: var(--blue);
   text-transform: uppercase;
@@ -1618,6 +1714,10 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
   .bank-card-section { min-height: 112px; padding: 16px; }
   .bank-card-value small { font-size: 28px; }
   .bank-card-value strong { font-size: 34px; }
+  .account-edit-grid,
+  .account-edit-grid.three {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 560px) {
