@@ -365,18 +365,18 @@
             </div>
             <div id="academicCalendar" class="academic-calendar"></div>
           </section>
-          <section class="work-board">
-            <article>
-              <div class="panel-title">Provas</div>
-              <div id="activeWorkList" class="work-card-grid"></div>
+          <section class="work-board kanban-board">
+            <article class="kanban-column" data-work-status="ativo">
+              <div class="panel-title">Pendente</div>
+              <div id="activeWorkList" class="work-card-grid" data-work-status="ativo"></div>
             </article>
-            <article>
-              <div class="panel-title">Trabalhos</div>
-              <div id="pendingWorkList" class="work-card-grid"></div>
+            <article class="kanban-column" data-work-status="andamento">
+              <div class="panel-title">Em andamento</div>
+              <div id="pendingWorkList" class="work-card-grid" data-work-status="andamento"></div>
             </article>
-            <article>
-              <div class="panel-title">Anotacoes</div>
-              <div id="doneWorkList" class="work-card-grid"></div>
+            <article class="kanban-column" data-work-status="concluido">
+              <div class="panel-title">Concluido</div>
+              <div id="doneWorkList" class="work-card-grid" data-work-status="concluido"></div>
             </article>
           </section>
         </div>

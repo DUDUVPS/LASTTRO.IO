@@ -1350,9 +1350,28 @@ button { border: 0; cursor: pointer; }
     var(--panel);
 }
 
+.kanban-column {
+  min-height: 380px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.015)),
+    var(--panel);
+}
+
+.kanban-column.drop-target {
+  border-color: rgba(74,158,255,.55);
+  background:
+    linear-gradient(180deg, rgba(74,158,255,.12), rgba(46,204,138,.05)),
+    var(--panel);
+}
+
 .work-card-grid {
   display: grid;
   gap: 10px;
+  min-height: 280px;
+  align-content: start;
 }
 
 .work-card {
@@ -1364,6 +1383,12 @@ button { border: 0; cursor: pointer; }
   border: 1px solid var(--line);
   border-radius: 8px;
   box-shadow: 0 12px 30px rgba(0,0,0,.14);
+  cursor: grab;
+}
+
+.work-card.dragging {
+  opacity: .45;
+  cursor: grabbing;
 }
 
 .work-card:hover {

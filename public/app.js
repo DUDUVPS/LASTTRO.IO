@@ -856,6 +856,8 @@ function renderWork() {
   const exams = works.filter(work => academicKind(work) === 'prova');
   const assignments = works.filter(work => academicKind(work) === 'trabalho');
   const notes = works.filter(work => academicKind(work) === 'anotacao');
+  const pending = works.filter(work => work.status === 'ativo');
+  const doing = works.filter(work => work.status === 'andamento');
   const pendingItems = works.filter(work => work.status !== 'concluido');
   const done = works.filter(work => work.status === 'concluido');
 
@@ -882,9 +884,9 @@ function renderWork() {
     </article>
   `;
 
-  qs('#activeWorkList').innerHTML = exams.map(workCardTemplate).join('') || emptyTemplate('Nenhuma prova cadastrada.');
-  qs('#pendingWorkList').innerHTML = assignments.map(workCardTemplate).join('') || emptyTemplate('Nenhum trabalho cadastrado.');
-  qs('#doneWorkList').innerHTML = notes.map(workCardTemplate).join('') || emptyTemplate('Nenhuma anotacao cadastrada.');
+  qs('#activeWorkList').innerHTML = pending.map(workCardTemplate).join('') || emptyTemplate('Nada pendente.');
+  qs('#pendingWorkList').innerHTML = doing.map(workCardTemplate).join('') || emptyTemplate('Nada em andamento.');
+  qs('#doneWorkList').innerHTML = done.map(workCardTemplate).join('') || emptyTemplate('Nada concluido.');
   renderAcademicCalendar(works);
 }
 
@@ -1171,7 +1173,7 @@ function workCardTemplate(work) {
   const kind = academicKind(item);
   const icon = kind === 'prova' ? 'fa-file-pen' : kind === 'anotacao' ? 'fa-note-sticky' : 'fa-list-check';
   return `
-    <article class="work-card">
+    <article class="work-card" draggable="true" data-work-id="${item.id}">
       <div class="work-card-head">
         <div class="work-card-title">
           <strong>${escapeHtml(item.nome)}</strong>
@@ -1516,6 +1518,19 @@ function editWork(id) {
   if (item) openModal('work', item);
 }
 
+async function updateWorkStatus(id, status) {
+  const item = state.data.trabalhos.find(work => work.id === id);
+  if (!item || item.status === status) return;
+  const optimistic = { ...item, status };
+  state.data.trabalhos = state.data.trabalhos.map(work => work.id === id ? optimistic : work);
+  renderWork();
+  await api(`/api/trabalhos/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ ...item, status })
+  });
+  await loadDashboard();
+}
+
 function updateWithdrawSimulation() {
   const input = qs('#formFields [name="valor"]');
   const interest = qs('#withdrawInterest');
@@ -1646,6 +1661,41 @@ function bindEvents() {
   });
   qs('#entityForm').addEventListener('input', event => {
     if (state.modalType === 'bankWithdraw' && event.target.name === 'valor') updateWithdrawSimulation();
+  });
+
+  document.body.addEventListener('dragstart', event => {
+    const card = event.target.closest('[data-work-id]');
+    if (!card) return;
+    event.dataTransfer.setData('text/plain', card.dataset.workId);
+    event.dataTransfer.effectAllowed = 'move';
+    card.classList.add('dragging');
+  });
+
+  document.body.addEventListener('dragend', event => {
+    event.target.closest('[data-work-id]')?.classList.remove('dragging');
+    qsa('.kanban-column').forEach(column => column.classList.remove('drop-target'));
+  });
+
+  document.body.addEventListener('dragover', event => {
+    const column = event.target.closest('[data-work-status]');
+    if (!column) return;
+    event.preventDefault();
+    column.closest('.kanban-column')?.classList.add('drop-target');
+  });
+
+  document.body.addEventListener('dragleave', event => {
+    const column = event.target.closest('.kanban-column');
+    if (column && !column.contains(event.relatedTarget)) column.classList.remove('drop-target');
+  });
+
+  document.body.addEventListener('drop', event => {
+    const column = event.target.closest('[data-work-status]');
+    if (!column) return;
+    event.preventDefault();
+    qsa('.kanban-column').forEach(item => item.classList.remove('drop-target'));
+    const id = event.dataTransfer.getData('text/plain');
+    const status = column.dataset.workStatus;
+    if (id && status) updateWorkStatus(id, status);
   });
 
   document.body.addEventListener('click', event => {
