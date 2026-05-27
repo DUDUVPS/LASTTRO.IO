@@ -20,7 +20,8 @@ const pages = {
   overview: { title: 'Visao geral', subtitle: 'maio de 2026' },
   finance: { title: 'Financeiro', subtitle: 'entradas, saidas e investimentos' },
   goals: { title: 'Metas', subtitle: 'objetivos e progresso' },
-  work: { title: 'Faculdade', subtitle: 'provas, trabalhos e anotacoes' }
+  work: { title: 'Faculdade', subtitle: 'provas, trabalhos e anotacoes' },
+  email: { title: 'Email', subtitle: 'atalhos e mensagens pelo Gmail' }
 };
 
 const categoryColors = ['#ff7a45', '#00c4b4', '#8b6fff', '#f0b43c', '#4a9eff', '#2ecc8a'];
@@ -368,6 +369,8 @@ function renderAll() {
   renderFinance();
   renderGoals();
   renderWork();
+  renderEmail();
+  renderSmartSuggestions();
 }
 
 function renderSummary() {
@@ -494,6 +497,78 @@ function renderFinance() {
   qs('#transactionsTotal').textContent = formatMoney(total);
   list.innerHTML = filtered.map(transactionCardTemplate).join('') || emptyTemplate('Nenhuma transacao nesta categoria.');
   renderMonthlyStatements();
+}
+
+function buildSmartSuggestions() {
+  if (!state.data) return [];
+  const resumo = state.data.resumo || {};
+  const suggestions = [];
+  if (Number(resumo.saldo || 0) > 0) {
+    suggestions.push({
+      icon: 'fa-chart-line',
+      title: 'Que tal investir hoje?',
+      text: `Voce tem ${formatMoney(resumo.saldo)} de saldo. Separar uma parte pequena ja melhora seu patrimonio.`
+    });
+  }
+  if (Number(resumo.gastos || 0) > Number(resumo.entradas || 0)) {
+    suggestions.push({
+      icon: 'fa-triangle-exclamation',
+      title: 'Gastos acima das entradas',
+      text: 'Vale revisar as saidas deste mes antes de criar novas compras.'
+    });
+  }
+  const nextWork = [...(state.data.trabalhos || [])]
+    .filter(item => item.status !== 'concluido' && item.inicio)
+    .sort((a, b) => new Date(a.inicio) - new Date(b.inicio))[0];
+  if (nextWork) {
+    suggestions.push({
+      icon: 'fa-graduation-cap',
+      title: 'Prazo de faculdade chegando',
+      text: `${nextWork.nome} esta marcado para ${new Date(`${nextWork.inicio}T00:00:00`).toLocaleDateString('pt-BR')}.`
+    });
+  }
+  if (!suggestions.length) {
+    suggestions.push({ icon: 'fa-sparkles', title: 'Tudo organizado', text: 'Seu painel esta tranquilo hoje. Continue alimentando os dados.' });
+  }
+  return suggestions.slice(0, 4);
+}
+
+function renderSmartSuggestions() {
+  const suggestions = buildSmartSuggestions();
+  const panel = qs('#smartPanel');
+  if (panel) {
+    panel.innerHTML = `
+      <div>
+        <span>LASTTRO recomenda</span>
+        <strong>${escapeHtml(suggestions[0].title)}</strong>
+        <small>${escapeHtml(suggestions[0].text)}</small>
+      </div>
+      <button class="pill-button" type="button" data-go="finance"><i class="fa-solid fa-arrow-right"></i><span>Ver financeiro</span></button>
+    `;
+  }
+  qs('#notificationCount').textContent = String(suggestions.length);
+  const popout = qs('#notificationPopout');
+  if (popout) {
+    popout.innerHTML = `
+      <div class="notification-head"><strong>Notificacoes</strong><button class="icon-button" id="closeNotifications" type="button"><i class="fa-solid fa-xmark"></i></button></div>
+      ${suggestions.map(item => `
+        <article>
+          <i class="fa-solid ${item.icon}"></i>
+          <span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.text)}</small></span>
+        </article>
+      `).join('')}
+    `;
+  }
+}
+
+function showToast(title, text) {
+  const stack = qs('#toastStack');
+  if (!stack) return;
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `<strong>${escapeHtml(title)}</strong><small>${escapeHtml(text)}</small>`;
+  stack.appendChild(toast);
+  setTimeout(() => toast.remove(), 4500);
 }
 
 function renderMonthlyStatements() {
@@ -798,28 +873,42 @@ function renderAcademicCalendar(works) {
   const container = qs('#academicCalendar');
   if (!container) return;
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const upcoming = works
-    .filter(item => item.inicio && item.status !== 'concluido')
-    .sort((a, b) => new Date(a.inicio) - new Date(b.inicio))
-    .slice(0, 8);
-  container.innerHTML = upcoming.map(item => {
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const startOffset = firstDay.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthItems = works.filter(item => {
+    if (!item.inicio) return false;
     const date = new Date(`${item.inicio}T00:00:00`);
-    const diff = Math.ceil((date - today) / 86400000);
-    const day = date.toLocaleDateString('pt-BR', { day: '2-digit' });
-    const month = date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
-    const urgency = diff < 0 ? 'Atrasado' : diff === 0 ? 'Hoje' : `${diff} dias`;
-    return `
-      <article class="calendar-item ${diff <= 2 ? 'urgent' : ''}">
-        <div class="calendar-date"><strong>${day}</strong><span>${month}</span></div>
-        <div>
-          <strong>${escapeHtml(item.nome)}</strong>
-          <span>${escapeHtml(item.tipo)} · ${escapeHtml(item.disciplina || 'Sem materia')}</span>
-        </div>
-        <small>${escapeHtml(urgency)}</small>
-      </article>
-    `;
-  }).join('') || emptyTemplate('Sem prazos cadastrados.');
+    return date.getFullYear() === year && date.getMonth() === month;
+  });
+  const byDay = monthItems.reduce((acc, item) => {
+    const day = new Date(`${item.inicio}T00:00:00`).getDate();
+    if (!acc[day]) acc[day] = [];
+    acc[day].push(item);
+    return acc;
+  }, {});
+  const cells = [];
+  for (let i = 0; i < startOffset; i += 1) cells.push('<span class="calendar-day empty-day"></span>');
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const items = byDay[day] || [];
+    const isToday = day === today.getDate();
+    cells.push(`
+      <button class="calendar-day ${isToday ? 'today' : ''} ${items.length ? 'has-items' : ''}" type="button" title="${items.map(item => item.nome).join(', ')}">
+        <strong>${day}</strong>
+        <span>${items.slice(0, 2).map(item => escapeHtml(item.tipo)).join(' · ')}</span>
+      </button>
+    `);
+  }
+  container.innerHTML = `
+    <div class="calendar-month-head">
+      <strong>${today.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</strong>
+      <span>${monthItems.length} prazos no mes</span>
+    </div>
+    <div class="calendar-weekdays"><span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sab</span></div>
+    <div class="calendar-month-grid">${cells.join('')}</div>
+  `;
 }
 
 function academicKind(work) {
@@ -1108,7 +1197,7 @@ function setFinanceTab(tabName) {
 
 function openModal(type, editItem = null) {
   state.modalType = type;
-  state.editing = editItem ? { type, id: editItem.id } : null;
+  state.editing = editItem?.id ? { type, id: editItem.id } : null;
   const dialog = qs('#entityDialog');
   const title = qs('#dialogTitle');
   const fields = qs('#formFields');
@@ -1117,25 +1206,28 @@ function openModal(type, editItem = null) {
   fields.className = 'form-grid';
 
   if (type === 'transaction') {
-    title.textContent = 'Nova transacao';
+    const item = editItem || {};
+    const editingTransaction = Boolean(editItem);
+    const transactionType = item.tipo === 'entrada' ? 'entrada' : 'saida';
+    title.textContent = editingTransaction ? 'Copiar transacao' : 'Nova transacao';
     fields.className = 'form-grid transaction-editor-form';
     fields.innerHTML = `
       <div class="transaction-edit-hero">
         <div>
           <span>Movimentacao</span>
-          <strong>Nova transacao</strong>
+          <strong>${editingTransaction ? 'Copiar transacao' : 'Nova transacao'}</strong>
         </div>
         <i class="fa-solid fa-right-left"></i>
       </div>
       <section class="transaction-edit-section">
         <div class="transaction-type-toggle">
-          <label><input type="radio" name="tipo" value="entrada"><span><i class="fa-solid fa-arrow-up"></i>Entrada</span></label>
-          <label><input type="radio" name="tipo" value="saida" checked><span><i class="fa-solid fa-arrow-down"></i>Saida</span></label>
+          <label><input type="radio" name="tipo" value="entrada" ${transactionType === 'entrada' ? 'checked' : ''}><span><i class="fa-solid fa-arrow-up"></i>Entrada</span></label>
+          <label><input type="radio" name="tipo" value="saida" ${transactionType === 'saida' ? 'checked' : ''}><span><i class="fa-solid fa-arrow-down"></i>Saida</span></label>
         </div>
         <div class="transaction-edit-grid">
-          ${field('nome', 'Nome', 'text', 'Ex: Mercado', true)}
-          ${field('val', 'Valor', 'number', '0', true)}
-          ${field('data', 'Data', 'date', today, true)}
+          ${field('nome', 'Nome', 'text', item.nome || 'Ex: Mercado', true)}
+          ${field('val', 'Valor', 'number', Math.abs(Number(item.val || 0)), true)}
+          ${field('data', 'Data', 'date', item.data || today, true)}
           <label>Categoria
             <select name="catPreset" id="transactionCategorySelect"></select>
           </label>
@@ -1150,6 +1242,15 @@ function openModal(type, editItem = null) {
       </section>
     `;
     updateTransactionCategoryOptions();
+    const categories = transactionCategories[transactionType] || [];
+    if (item.cat && categories.includes(item.cat)) {
+      qs('#transactionCategorySelect').value = item.cat;
+    } else if (item.cat) {
+      qs('#transactionCategorySelect').value = 'Outros';
+      qs('#customCategoryField').classList.remove('hidden');
+      qs('[name="catCustom"]').value = item.cat;
+    }
+    qs('[name="recorrente"]').checked = Boolean(item.recorrente);
   }
 
   if (type === 'goal') {
@@ -1412,11 +1513,23 @@ async function duplicateTransaction(id) {
   const copy = {
     ...item,
     id: undefined,
-    nome: `${item.nome} copia`,
     data: new Date().toISOString().slice(0, 10)
   };
-  await api('/api/transacoes', { method: 'POST', body: JSON.stringify(copy) });
-  await loadDashboard();
+  openModal('transaction', copy);
+}
+
+function renderEmail() {
+  const email = state.user?.email || state.user?.username || 'sem login';
+  const label = qs('#gmailAccount');
+  if (label) label.textContent = email;
+}
+
+function openGmailCompose() {
+  const to = encodeURIComponent(qs('#gmailTo')?.value || '');
+  const subject = encodeURIComponent(qs('#gmailSubject')?.value || '');
+  const body = encodeURIComponent(qs('#gmailBody')?.value || '');
+  window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`, '_blank', 'noopener,noreferrer');
+  showToast('Gmail aberto', 'A mensagem foi preparada em uma nova janela do Gmail.');
 }
 
 function bindEvents() {
@@ -1429,6 +1542,8 @@ function bindEvents() {
   qs('#settingsChangePasswordButton')?.addEventListener('click', openPasswordSettings);
   qs('#profilePhotoInput')?.addEventListener('change', changeProfilePhoto);
   qs('#removeProfilePhotoButton')?.addEventListener('click', removeProfilePhoto);
+  qs('#openGmailCompose')?.addEventListener('click', openGmailCompose);
+  qs('#notificationButton')?.addEventListener('click', () => qs('#notificationPopout')?.classList.toggle('show'));
   qsa('.nav-item').forEach(item => item.addEventListener('click', () => setPage(item.dataset.page)));
   qsa('[data-go]').forEach(item => item.addEventListener('click', () => setPage(item.dataset.go)));
   qsa('[data-modal]').forEach(button => button.addEventListener('click', () => openModal(button.dataset.modal)));
@@ -1501,6 +1616,11 @@ function bindEvents() {
     const duplicateTransactionButton = event.target.closest('[data-duplicate-transaction]');
     if (duplicateTransactionButton) {
       duplicateTransaction(duplicateTransactionButton.dataset.duplicateTransaction);
+      return;
+    }
+
+    if (event.target.closest('#closeNotifications')) {
+      qs('#notificationPopout')?.classList.remove('show');
       return;
     }
 

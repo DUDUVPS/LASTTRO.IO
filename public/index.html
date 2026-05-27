@@ -63,6 +63,7 @@
         <button class="nav-item" data-page="finance"><i class="fa-regular fa-credit-card"></i><span>Financeiro</span></button>
         <button class="nav-item" data-page="goals"><i class="fa-regular fa-circle-dot"></i><span>Metas</span></button>
         <button class="nav-item" data-page="work"><i class="fa-solid fa-graduation-cap"></i><span>Faculdade</span></button>
+        <button class="nav-item" data-page="email"><i class="fa-regular fa-envelope"></i><span>Email</span></button>
       </nav>
 
       <button class="sidebar-account" id="accountButton" type="button" title="Conta">
@@ -88,10 +89,16 @@
           <h1 id="pageTitle">Visao geral</h1>
           <p id="pageSubtitle">maio de 2026</p>
         </div>
+        <button class="icon-button notification-button" id="notificationButton" type="button" aria-label="Notificacoes">
+          <i class="fa-regular fa-bell"></i>
+          <span id="notificationCount">0</span>
+        </button>
       </header>
 
       <section class="content">
         <div class="view active" id="view-overview">
+          <section class="smart-panel" id="smartPanel"></section>
+
           <section class="cashflow">
             <div class="section-kicker">Fluxo de caixa</div>
             <div class="cashflow-grid">
@@ -373,11 +380,43 @@
             </article>
           </section>
         </div>
+
+        <div class="view" id="view-email">
+          <section class="section-head">
+            <div>
+              <span>Gmail</span>
+              <h2>Caixa de email</h2>
+              <p>Atalhos para acompanhar mensagens e escrever emails pelo Gmail.</p>
+            </div>
+            <a class="primary-button" href="https://mail.google.com/mail/u/0/#inbox" target="_blank" rel="noreferrer"><i class="fa-brands fa-google"></i><span>Abrir Gmail</span></a>
+          </section>
+          <section class="email-grid">
+            <article class="email-card primary">
+              <span>Conta conectada</span>
+              <strong id="gmailAccount">sem login</strong>
+              <small>O login atual usa Google OAuth. Para ler emails aqui dentro sera preciso liberar o escopo do Gmail depois.</small>
+            </article>
+            <article class="email-compose-card">
+              <div class="panel-title">Novo email rapido</div>
+              <label>Para<input id="gmailTo" type="email" placeholder="destino@gmail.com"></label>
+              <label>Assunto<input id="gmailSubject" type="text" placeholder="Assunto"></label>
+              <label>Mensagem<textarea id="gmailBody" rows="5" placeholder="Escreva sua mensagem"></textarea></label>
+              <button class="primary-button" id="openGmailCompose" type="button"><i class="fa-regular fa-paper-plane"></i><span>Escrever no Gmail</span></button>
+            </article>
+            <article class="email-card">
+              <span>Proximo passo</span>
+              <strong>Integracao completa</strong>
+              <small>Depois podemos ativar Gmail API para puxar caixa de entrada, marcar lidos e criar lembretes por email.</small>
+            </article>
+          </section>
+        </div>
       </section>
     </main>
   </div>
 
   <div class="overlay" id="overlay"></div>
+  <div class="notification-popout" id="notificationPopout"></div>
+  <div class="toast-stack" id="toastStack"></div>
 
   <dialog id="entityDialog">
     <form method="dialog" id="entityForm">

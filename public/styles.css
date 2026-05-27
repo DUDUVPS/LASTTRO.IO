@@ -349,6 +349,26 @@ button { border: 0; cursor: pointer; }
 .topbar-actions { margin-left: auto; display: flex; gap: 10px; }
 .menu-button { display: none !important; }
 
+.notification-button {
+  position: relative;
+  margin-left: auto;
+}
+
+.notification-button span {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #0d0d0b;
+  background: var(--green);
+  font-size: 10px;
+  font-weight: 800;
+}
+
 .content {
   flex: 1;
   overflow: auto;
@@ -357,6 +377,44 @@ button { border: 0; cursor: pointer; }
 
 .view { display: none; }
 .view.active { display: block; }
+
+.smart-panel {
+  min-height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(74,158,255,.22);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(74,158,255,.14), rgba(46,204,138,.08)),
+    var(--panel);
+}
+
+.smart-panel div {
+  display: grid;
+  gap: 4px;
+}
+
+.smart-panel span {
+  color: var(--blue);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.smart-panel strong {
+  font-family: Rajdhani, sans-serif;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.smart-panel small {
+  color: var(--muted);
+}
 
 .cashflow, .panel, .metric-card, .list-card {
   background: var(--panel);
@@ -1381,8 +1439,76 @@ button { border: 0; cursor: pointer; }
 
 .academic-calendar {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.calendar-month-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  color: var(--muted);
+}
+
+.calendar-month-head strong {
+  color: var(--text);
+  text-transform: capitalize;
+}
+
+.calendar-weekdays,
+.calendar-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.calendar-weekdays span {
+  color: var(--subtle);
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.calendar-day {
+  min-height: 78px;
+  display: grid;
+  align-content: space-between;
+  gap: 6px;
+  padding: 10px;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255,255,255,.03);
+  text-align: left;
+}
+
+.calendar-day.empty-day {
+  opacity: .35;
+  background: transparent;
+}
+
+.calendar-day.today {
+  border-color: rgba(74,158,255,.45);
+  background: rgba(74,158,255,.1);
+}
+
+.calendar-day.has-items {
+  border-color: rgba(46,204,138,.3);
+}
+
+.calendar-day strong {
+  font-family: Rajdhani, sans-serif;
+  font-size: 22px;
+}
+
+.calendar-day span {
+  min-height: 14px;
+  overflow: hidden;
+  color: var(--green);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .calendar-item {
@@ -1431,6 +1557,125 @@ button { border: 0; cursor: pointer; }
 .calendar-item span {
   color: var(--subtle);
   font-size: 11px;
+}
+
+.email-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, .8fr) minmax(320px, 1.2fr) minmax(240px, .8fr);
+  gap: 14px;
+}
+
+.email-card,
+.email-compose-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.email-card.primary {
+  border-color: rgba(74,158,255,.24);
+  background: linear-gradient(135deg, rgba(74,158,255,.12), rgba(46,204,138,.05)), var(--panel);
+}
+
+.email-card span {
+  color: var(--blue);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.email-card strong {
+  font-family: Rajdhani, sans-serif;
+  font-size: 26px;
+  line-height: 1;
+  word-break: break-word;
+}
+
+.email-card small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.notification-popout {
+  position: fixed;
+  top: 78px;
+  right: 22px;
+  width: min(360px, calc(100vw - 32px));
+  display: none;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: rgba(23,23,21,.96);
+  box-shadow: 0 24px 80px rgba(0,0,0,.42);
+  z-index: 30;
+}
+
+.notification-popout.show {
+  display: grid;
+}
+
+.notification-head,
+.notification-popout article {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.notification-head {
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.notification-popout article {
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.03);
+}
+
+.notification-popout article i {
+  color: var(--green);
+  margin-top: 3px;
+}
+
+.notification-popout article span {
+  display: grid;
+  gap: 3px;
+}
+
+.notification-popout small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.toast-stack {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  display: grid;
+  gap: 10px;
+  z-index: 40;
+}
+
+.toast {
+  width: min(320px, calc(100vw - 32px));
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(46,204,138,.28);
+  border-radius: 8px;
+  background: rgba(23,23,21,.96);
+  box-shadow: 0 18px 60px rgba(0,0,0,.35);
+}
+
+.toast small {
+  color: var(--muted);
 }
 
 .bank-hero {
@@ -1935,13 +2180,16 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
   .main { min-height: 100vh; }
   .menu-button { display: inline-flex !important; }
   .content { padding: 16px; }
-  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board { grid-template-columns: 1fr; }
+  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .email-grid { grid-template-columns: 1fr; }
   .statement-grid,
-  .academic-calendar,
   .transaction-edit-grid,
   .transaction-type-toggle {
     grid-template-columns: 1fr;
   }
+  .calendar-weekdays,
+  .calendar-month-grid { gap: 5px; }
+  .calendar-day { min-height: 58px; padding: 7px; }
+  .smart-panel { align-items: flex-start; flex-direction: column; }
   .dashboard-grid .panel:nth-child(1) { order: 1; }
   .dashboard-grid .panel:nth-child(3) { order: 2; }
   .dashboard-grid .panel:nth-child(2) { order: 3; }
