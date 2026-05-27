@@ -571,10 +571,10 @@ async function handleApi(req, res, pathname) {
 
     if (stateData.mode === 'gmail') {
       const sessionEmail = normalizeEmail(stateData.email);
-      if (email !== sessionEmail) return sendHtml(res, 401, 'Conecte o Gmail da mesma conta logada no LASTTRO.');
-      const user = db.auth.users.find(item => item.email === email);
+      const user = db.auth.users.find(item => item.email === sessionEmail);
       if (!user) return sendHtml(res, 404, 'Usuario nao encontrado.');
       user.gmail = {
+        email,
         accessToken: tokenPayload.access_token,
         refreshToken: tokenPayload.refresh_token || user.gmail?.refreshToken || '',
         expiresAt: Date.now() + Number(tokenPayload.expires_in || 3600) * 1000,
@@ -680,7 +680,11 @@ async function handleApi(req, res, pathname) {
   const data = getUserData(db, userEmail);
 
   if (req.method === 'GET' && pathname === '/api/gmail/status') {
-    return send(res, 200, { connected: Boolean(currentUser?.gmail?.refreshToken || currentUser?.gmail?.accessToken), email: currentUser?.email || userEmail });
+    return send(res, 200, {
+      connected: Boolean(currentUser?.gmail?.refreshToken || currentUser?.gmail?.accessToken),
+      email: currentUser?.gmail?.email || '',
+      accountEmail: currentUser?.email || userEmail
+    });
   }
 
   if (req.method === 'GET' && pathname === '/api/gmail/messages') {

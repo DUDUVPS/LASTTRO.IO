@@ -1538,12 +1538,15 @@ async function duplicateTransaction(id) {
 }
 
 function renderEmail() {
-  const email = state.user?.email || state.user?.username || 'sem login';
+  const loginEmail = state.user?.email || state.user?.username || 'sem login';
+  const email = state.gmailStatus?.connected ? (state.gmailStatus.email || 'Gmail conectado') : loginEmail;
   const label = qs('#gmailAccount');
   if (label) label.textContent = email;
   const connected = Boolean(state.gmailStatus?.connected);
   const status = qs('#gmailStatusText');
-  if (status) status.textContent = connected ? 'Gmail conectado e pronto para sincronizar.' : (state.gmailStatus?.error || 'Clique em conectar para liberar o Gmail.');
+  if (status) status.textContent = connected
+    ? `Gmail conectado nesta conta LASTTRO: ${loginEmail}.`
+    : (state.gmailStatus?.error || 'Clique em conectar para liberar qualquer Gmail.');
   const button = qs('#connectGmailButton');
   if (button) button.innerHTML = connected
     ? '<i class="fa-solid fa-check"></i><span>Gmail conectado</span>'
