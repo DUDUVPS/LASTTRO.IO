@@ -609,15 +609,78 @@ function renderMonthlyStatements() {
 
 function statementTemplate(item) {
   const label = item.mes === 'sem-data' ? 'Sem data' : new Date(`${item.mes}-02`).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const period = statementPeriod(item.mes);
   return `
     <article class="statement-card">
       <strong>${escapeHtml(label)}</strong>
-      <span>${item.count} ${item.count === 1 ? 'movimentacao' : 'movimentacoes'}</span>
+      <span>${period.label} · ${item.count} ${item.count === 1 ? 'movimentacao' : 'movimentacoes'}</span>
       <div><small>Entradas</small><b class="positive">${formatMoney(item.entradas)}</b></div>
       <div><small>Saidas</small><b class="negative">${formatMoney(item.saidas)}</b></div>
-      <footer>Resultado ${formatMoney(item.total)}</footer>
+      <footer>
+        <span>Resultado ${formatMoney(item.total)}</span>
+        <button class="pill-button" type="button" data-download-statement="${escapeHtml(item.mes)}"><i class="fa-solid fa-download"></i><span>Baixar</span></button>
+      </footer>
     </article>
   `;
+}
+
+function statementPeriod(month) {
+  if (!/^\d{4}-\d{2}$/.test(month)) return { start: '', end: '', label: 'Periodo sem data' };
+  const [year, monthIndex] = month.split('-').map(Number);
+  const endDate = new Date(year, monthIndex, 0);
+  const end = `${year}-${String(monthIndex).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+  return { start: `${month}-01`, end, label: `01/${String(monthIndex).padStart(2, '0')} a ${String(endDate.getDate()).padStart(2, '0')}/${String(monthIndex).padStart(2, '0')}` };
+}
+
+function csvCell(value) {
+  return `"${String(value ?? '').replace(/"/g, '""')}"`;
+}
+
+function csvMoney(value) {
+  return Number(value || 0).toFixed(2).replace('.', ',');
+}
+
+function downloadMonthlyStatement(month) {
+  const period = statementPeriod(month);
+  if (!period.start || !period.end) {
+    showToast('Extrato indisponivel', 'Esse mes nao tem um periodo valido.');
+    return;
+  }
+  const transactions = state.data.transacoes
+    .filter(item => item.tipo !== 'investimento')
+    .filter(item => {
+      const date = String(item.data || '');
+      return date >= period.start && date <= period.end;
+    })
+    .sort((a, b) => new Date(a.data) - new Date(b.data));
+  if (!transactions.length) {
+    showToast('Extrato vazio', 'Nao ha movimentacoes nesse mes.');
+    return;
+  }
+  const entradas = transactions.filter(item => item.tipo === 'entrada').reduce((sum, item) => sum + Number(item.val || 0), 0);
+  const saidas = transactions.filter(item => item.tipo === 'saida').reduce((sum, item) => sum + Math.abs(Number(item.val || 0)), 0);
+  const rows = [
+    ['LASTTRO - Extrato mensal'],
+    [`Periodo: ${period.start} ate ${period.end}`],
+    [''],
+    ['Data', 'Tipo', 'Categoria', 'Nome', 'Valor'],
+    ...transactions.map(item => [item.data, item.tipo, item.cat, item.nome, csvMoney(item.val)]),
+    [''],
+    ['Entradas', '', '', '', csvMoney(entradas)],
+    ['Saidas', '', '', '', csvMoney(saidas)],
+    ['Resultado', '', '', '', csvMoney(entradas - saidas)]
+  ];
+  const csv = rows.map(row => row.map(csvCell).join(';')).join('\r\n');
+  const blob = new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `lasttro-extrato-${month}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  showToast('Extrato baixado', `Periodo ${period.start} ate ${period.end}.`);
 }
 
 function updateTransactionCategoryOptions() {
@@ -1798,6 +1861,12 @@ function bindEvents() {
     const duplicateTransactionButton = event.target.closest('[data-duplicate-transaction]');
     if (duplicateTransactionButton) {
       duplicateTransaction(duplicateTransactionButton.dataset.duplicateTransaction);
+      return;
+    }
+
+    const downloadStatementButton = event.target.closest('[data-download-statement]');
+    if (downloadStatementButton) {
+      downloadMonthlyStatement(downloadStatementButton.dataset.downloadStatement);
       return;
     }
 

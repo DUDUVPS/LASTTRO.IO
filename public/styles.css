@@ -664,6 +664,18 @@ button { border: 0; cursor: pointer; }
   gap: 10px;
 }
 
+.statement-card footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.statement-card footer .pill-button {
+  min-height: 34px;
+  padding: 0 10px;
+}
+
 .statement-card b.positive { color: var(--green); }
 .statement-card b.negative { color: var(--red); }
 
