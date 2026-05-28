@@ -35,6 +35,7 @@ const initialData = {
     { id: 'j1', nome: 'Empresa Principal', tipo: 'CLT', status: 'ativo', salario: 700, horas: 44, inicio: '2025-01-01' },
     { id: 'j2', nome: 'Freela Dev', tipo: 'Freelancer', status: 'andamento', salario: 169, horas: 8, inicio: '2026-05-10' }
   ],
+  casa: [],
   contasCartoes: [
     { id: 'c1', nome: 'Inter principal', tipo: 'conta', bandeira: 'Conta corrente', saldo: 1421, limite: 0, usado: 0, vencimento: 1 },
     { id: 'c2', nome: 'Nubank', tipo: 'cartao', bandeira: 'Mastercard', saldo: 0, limite: 1800, usado: 390, vencimento: 15 }
@@ -176,6 +177,7 @@ function blankUserData() {
     transacoes: [],
     metas: [],
     trabalhos: [],
+    casa: [],
     contasCartoes: [],
     investimentosCarteira: [],
     banco: { saldo: 0, retiradas: [] }
@@ -368,6 +370,7 @@ function withDefaults(db) {
     transacoes: db.transacoes || [],
     metas: db.metas || [],
     trabalhos: db.trabalhos || [],
+    casa: db.casa || [],
     contasCartoes: db.contasCartoes || initialData.contasCartoes,
     investimentosCarteira: db.investimentosCarteira || initialData.investimentosCarteira,
     banco: db.banco
@@ -390,6 +393,7 @@ function normalizeUserData(data = {}) {
     transacoes: data.transacoes || [],
     metas: data.metas || [],
     trabalhos: data.trabalhos || [],
+    casa: (data.casa || []).map(normalizeHomeItem),
     contasCartoes: (data.contasCartoes || []).map(normalizeAccountCard),
     investimentosCarteira: (data.investimentosCarteira || []).map(normalizeInvestment),
     banco: {
@@ -472,6 +476,22 @@ function normalizeWork(item) {
     salario: moneyValue(item.salario),
     horas: parseDecimal(item.horas, 0),
     inicio: item.inicio || new Date().toISOString().slice(0, 10)
+  };
+}
+
+function normalizeHomeItem(item) {
+  const tipo = ['despensa', 'conta', 'compra'].includes(item.tipo) ? item.tipo : 'despensa';
+  return {
+    id: item.id || crypto.randomUUID(),
+    tipo,
+    nome: String(item.nome || 'Novo item').trim(),
+    quantidade: parseDecimal(item.quantidade, tipo === 'despensa' ? 1 : 0),
+    minimo: parseDecimal(item.minimo, 1),
+    unidade: String(item.unidade || 'un').trim(),
+    valor: moneyValue(item.valor),
+    vencimento: item.vencimento || '',
+    status: item.status === 'feito' ? 'feito' : 'pendente',
+    observacao: String(item.observacao || '').trim()
   };
 }
 
@@ -749,7 +769,7 @@ async function handleApi(req, res, pathname) {
     return send(res, 200, { ...data, user: publicUser(currentUser || { email: userEmail }), resumo: buildResumo(data) });
   }
 
-  if (req.method === 'GET' && ['transacoes', 'metas', 'trabalhos'].includes(collection)) {
+  if (req.method === 'GET' && ['transacoes', 'metas', 'trabalhos', 'casa'].includes(collection)) {
     return send(res, 200, data[collection]);
   }
 
@@ -778,6 +798,13 @@ async function handleApi(req, res, pathname) {
   if (req.method === 'POST' && collection === 'trabalhos') {
     const created = normalizeWork(await readBody(req));
     data.trabalhos.unshift(created);
+    await writeDb(db);
+    return send(res, 201, created);
+  }
+
+  if (req.method === 'POST' && collection === 'casa') {
+    const created = normalizeHomeItem(await readBody(req));
+    data.casa.unshift(created);
     await writeDb(db);
     return send(res, 201, created);
   }
@@ -835,7 +862,7 @@ async function handleApi(req, res, pathname) {
     return send(res, 200, retirada);
   }
 
-  const match = pathname.match(/^\/api\/(transacoes|metas|trabalhos|contas-cartoes|investimentos)\/([^/]+)$/);
+  const match = pathname.match(/^\/api\/(transacoes|metas|trabalhos|casa|contas-cartoes|investimentos)\/([^/]+)$/);
   if (match && req.method === 'PUT') {
     const [, name, id] = match;
     const body = await readBody(req);
@@ -859,6 +886,13 @@ async function handleApi(req, res, pathname) {
       data.trabalhos[index] = normalizeWork({ ...data.trabalhos[index], ...body, id });
       await writeDb(db);
       return send(res, 200, data.trabalhos[index]);
+    }
+    if (name === 'casa') {
+      const index = data.casa.findIndex(item => item.id === id);
+      if (index === -1) return send(res, 404, { error: 'Item da casa nao encontrado' });
+      data.casa[index] = normalizeHomeItem({ ...data.casa[index], ...body, id });
+      await writeDb(db);
+      return send(res, 200, data.casa[index]);
     }
   }
 

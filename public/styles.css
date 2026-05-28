@@ -679,6 +679,122 @@ button { border: 0; cursor: pointer; }
 .statement-card b.positive { color: var(--green); }
 .statement-card b.negative { color: var(--red); }
 
+.home-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.home-summary-card,
+.home-column,
+.home-item-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255,255,255,.03);
+}
+
+.home-summary-card {
+  min-height: 108px;
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.home-summary-card.primary {
+  background: linear-gradient(135deg, rgba(74,158,255,.16), rgba(46,204,138,.12));
+}
+
+.home-summary-card span,
+.home-summary-card small,
+.home-item-card span,
+.home-item-card small,
+.home-item-card p {
+  color: var(--subtle);
+}
+
+.home-summary-card strong {
+  font-size: 32px;
+}
+
+.home-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.home-column {
+  padding: 14px;
+  min-height: 360px;
+}
+
+.home-list {
+  display: grid;
+  gap: 10px;
+}
+
+.home-item-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 14px;
+}
+
+.home-item-card.done {
+  opacity: .72;
+}
+
+.home-item-card strong {
+  display: block;
+  margin: 4px 0;
+  font-size: 18px;
+}
+
+.home-item-card p,
+.home-item-card .bar {
+  grid-column: 1 / -1;
+}
+
+.home-item-card .item-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.home-edit-hero,
+.home-edit-section {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255,255,255,.03);
+  padding: 16px;
+}
+
+.home-edit-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.home-edit-hero span,
+.home-edit-section label {
+  color: var(--muted);
+}
+
+.home-edit-hero strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 22px;
+}
+
+.home-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.home-edit-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .finance-tabs {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2288,7 +2404,7 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
   .main { min-height: 100vh; }
   .menu-button { display: inline-flex !important; }
   .content { padding: 16px; }
-  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .email-grid { grid-template-columns: 1fr; }
+  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .home-overview, .home-board, .home-edit-grid, .home-edit-grid.three, .email-grid { grid-template-columns: 1fr; }
   .statement-grid,
   .transaction-edit-grid,
   .goal-edit-grid,

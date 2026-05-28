@@ -63,6 +63,7 @@
         <button class="nav-item" data-page="finance"><i class="fa-regular fa-credit-card"></i><span>Financeiro</span></button>
         <button class="nav-item" data-page="goals"><i class="fa-regular fa-circle-dot"></i><span>Metas</span></button>
         <button class="nav-item" data-page="work"><i class="fa-solid fa-graduation-cap"></i><span>Faculdade</span></button>
+        <button class="nav-item" data-page="home"><i class="fa-solid fa-house-chimney"></i><span>Casa</span></button>
         <button class="nav-item" data-page="email"><i class="fa-regular fa-envelope"></i><span>Email</span></button>
       </nav>
 
@@ -409,6 +410,40 @@
                 <button class="pill-button" id="refreshGmailButton" type="button"><i class="fa-solid fa-rotate"></i><span>Atualizar</span></button>
               </div>
               <div id="gmailMessages" class="gmail-list"></div>
+            </article>
+          </section>
+        </div>
+
+        <div class="view" id="view-home">
+          <section class="section-head">
+            <div>
+              <h2>Casa</h2>
+              <p>Controle despensa, contas da casa e lista de compras.</p>
+            </div>
+            <button class="primary-button" data-modal="home" data-home-kind="despensa"><i class="fa-solid fa-plus"></i><span>Item</span></button>
+          </section>
+          <section class="home-overview" id="homeOverview"></section>
+          <section class="home-board">
+            <article class="home-column">
+              <div class="list-header">
+                <span>Despensa</span>
+                <button class="pill-button" data-modal="home" data-home-kind="despensa"><i class="fa-solid fa-plus"></i><span>Adicionar</span></button>
+              </div>
+              <div id="pantryList" class="home-list"></div>
+            </article>
+            <article class="home-column">
+              <div class="list-header">
+                <span>Contas</span>
+                <button class="pill-button" data-modal="home" data-home-kind="conta"><i class="fa-solid fa-plus"></i><span>Adicionar</span></button>
+              </div>
+              <div id="houseBillsList" class="home-list"></div>
+            </article>
+            <article class="home-column">
+              <div class="list-header">
+                <span>Compras</span>
+                <button class="pill-button" data-modal="home" data-home-kind="compra"><i class="fa-solid fa-plus"></i><span>Adicionar</span></button>
+              </div>
+              <div id="shoppingList" class="home-list"></div>
             </article>
           </section>
         </div>

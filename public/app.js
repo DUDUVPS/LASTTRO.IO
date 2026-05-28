@@ -11,6 +11,7 @@ const state = {
   investmentChart: null,
   modalType: null,
   editing: null,
+  homeKind: 'despensa',
   gmailStatus: null,
   gmailMessages: [],
   authMode: 'login',
@@ -23,6 +24,7 @@ const pages = {
   finance: { title: 'Financeiro', subtitle: 'entradas, saidas e investimentos' },
   goals: { title: 'Metas', subtitle: 'objetivos e progresso' },
   work: { title: 'Faculdade', subtitle: 'provas, trabalhos e anotacoes' },
+  home: { title: 'Casa', subtitle: 'despensa, contas e compras' },
   email: { title: 'Email', subtitle: 'atalhos e mensagens pelo Gmail' }
 };
 
@@ -388,6 +390,7 @@ function renderAll() {
   renderFinance();
   renderGoals();
   renderWork();
+  renderHome();
   renderEmail();
   renderSmartSuggestions();
 }
@@ -1029,6 +1032,60 @@ function renderWork() {
   renderAcademicCalendar(works);
 }
 
+function renderHome() {
+  const items = state.data.casa || [];
+  const pantry = items.filter(item => item.tipo === 'despensa');
+  const bills = items.filter(item => item.tipo === 'conta');
+  const shopping = items.filter(item => item.tipo === 'compra');
+  const openBills = bills.filter(item => item.status !== 'feito');
+  const shoppingOpen = shopping.filter(item => item.status !== 'feito');
+  const lowPantry = pantry.filter(item => Number(item.quantidade || 0) <= Number(item.minimo || 0));
+
+  qs('#homeOverview').innerHTML = `
+    <article class="home-summary-card primary">
+      <span>Despensa</span>
+      <strong>${pantry.length}</strong>
+      <small>${lowPantry.length} itens no minimo</small>
+    </article>
+    <article class="home-summary-card">
+      <span>Contas abertas</span>
+      <strong>${openBills.length}</strong>
+      <small>${formatMoney(openBills.reduce((sum, item) => sum + Number(item.valor || 0), 0))} previsto</small>
+    </article>
+    <article class="home-summary-card">
+      <span>Compras</span>
+      <strong>${shoppingOpen.length}</strong>
+      <small>${formatMoney(shoppingOpen.reduce((sum, item) => sum + Number(item.valor || 0), 0))} estimado</small>
+    </article>
+  `;
+  qs('#pantryList').innerHTML = pantry.map(homeItemTemplate).join('') || emptyTemplate('Nenhum item na despensa.');
+  qs('#houseBillsList').innerHTML = bills.map(homeItemTemplate).join('') || emptyTemplate('Nenhuma conta cadastrada.');
+  qs('#shoppingList').innerHTML = shopping.map(homeItemTemplate).join('') || emptyTemplate('Nenhuma compra na lista.');
+}
+
+function homeItemTemplate(item) {
+  const isMoney = ['conta', 'compra'].includes(item.tipo);
+  const status = item.status === 'feito' ? 'Concluido' : item.tipo === 'conta' ? 'Aberta' : 'Pendente';
+  const meta = item.tipo === 'despensa'
+    ? `${Number(item.quantidade || 0)} ${escapeHtml(item.unidade || 'un')} disponivel`
+    : `${formatMoney(item.valor)}${item.vencimento ? ` - ${escapeHtml(item.vencimento)}` : ''}`;
+  return `
+    <article class="home-item-card ${item.status === 'feito' ? 'done' : ''}">
+      <div>
+        <span>${escapeHtml(status)}</span>
+        <strong>${escapeHtml(item.nome)}</strong>
+        <small>${meta}</small>
+      </div>
+      <div class="item-actions">
+        <button class="icon-button" data-edit-home="${item.id}" aria-label="Editar item da casa"><i class="fa-regular fa-pen-to-square"></i></button>
+        <button class="delete-button" data-delete="casa" data-id="${item.id}" aria-label="Excluir item da casa"><i class="fa-regular fa-trash-can"></i></button>
+      </div>
+      ${item.observacao ? `<p>${escapeHtml(item.observacao)}</p>` : ''}
+      ${isMoney ? '' : `<div class="bar"><span style="width:${Math.min(100, (Number(item.quantidade || 0) / Math.max(Number(item.minimo || 1), 1)) * 100)}%;background:var(--green)"></span></div>`}
+    </article>
+  `;
+}
+
 function renderAcademicCalendar(works) {
   const container = qs('#academicCalendar');
   if (!container) return;
@@ -1473,6 +1530,49 @@ function openModal(type, editItem = null) {
     `;
   }
 
+  if (type === 'home') {
+    const item = editItem || { tipo: state.homeKind || 'despensa' };
+    title.textContent = editItem ? 'Editar item da casa' : 'Novo item da casa';
+    fields.className = 'form-grid home-editor-form';
+    fields.innerHTML = `
+      <div class="home-edit-hero">
+        <div>
+          <span>Casa</span>
+          <strong>${escapeHtml(item.nome || 'Novo item')}</strong>
+        </div>
+        <i class="fa-solid fa-house-chimney"></i>
+      </div>
+      <section class="home-edit-section">
+        <div class="home-edit-grid">
+          ${field('nome', 'Nome', 'text', item.nome || 'Ex: Arroz, energia ou mercado', true)}
+          <label>Area
+            <select name="tipo" id="homeTypeSelect">
+              <option value="despensa" ${item.tipo === 'despensa' ? 'selected' : ''}>Despensa</option>
+              <option value="conta" ${item.tipo === 'conta' ? 'selected' : ''}>Contas</option>
+              <option value="compra" ${item.tipo === 'compra' ? 'selected' : ''}>Compras</option>
+            </select>
+          </label>
+          <label>Status
+            <select name="status">
+              <option value="pendente" ${item.status !== 'feito' ? 'selected' : ''}>Pendente</option>
+              <option value="feito" ${item.status === 'feito' ? 'selected' : ''}>Concluido</option>
+            </select>
+          </label>
+        </div>
+      </section>
+      <section class="home-edit-section">
+        <div class="home-edit-grid three">
+          ${field('quantidade', 'Quantidade', 'number', item.quantidade ?? '1', false)}
+          ${field('minimo', 'Minimo ideal', 'number', item.minimo ?? '1', false)}
+          ${field('unidade', 'Unidade', 'text', item.unidade || 'un', false)}
+          ${field('valor', 'Valor', 'number', item.valor ?? '0', false)}
+          ${field('vencimento', 'Vencimento ou data', 'date', item.vencimento || '', false)}
+        </div>
+        <label>Observacao<textarea name="observacao" rows="3" placeholder="Detalhes, mercado, prioridade ou lembrete">${escapeHtml(item.observacao || '')}</textarea></label>
+      </section>
+    `;
+  }
+
   if (type === 'account') {
     const { account, card } = findRelatedAccountParts(editItem);
     const bankName = account?.nome || card?.nome?.replace(/\s*credito$/i, '') || '';
@@ -1558,7 +1658,7 @@ function openModal(type, editItem = null) {
 }
 
 function field(name, label, type, value, required) {
-  const decimalFields = ['val', 'target', 'atual', 'salario', 'saldo', 'limite', 'usado', 'valor', 'rendimento'];
+  const decimalFields = ['val', 'target', 'atual', 'salario', 'saldo', 'limite', 'usado', 'valor', 'rendimento', 'quantidade', 'minimo'];
   const inputType = type === 'number' && decimalFields.includes(name) ? 'text' : type;
   const decimalAttrs = inputType === 'text' && decimalFields.includes(name) ? ' inputmode="decimal"' : '';
   const step = type === 'number' && inputType === 'number' ? ' step="1"' : '';
@@ -1590,6 +1690,7 @@ async function submitModal(event) {
     transaction: '/api/transacoes',
     goal: '/api/metas',
     work: '/api/trabalhos',
+    home: '/api/casa',
     account: '/api/contas-cartoes',
     investment: '/api/investimentos',
     bankDeposit: '/api/banco/depositar',
@@ -1603,7 +1704,9 @@ async function submitModal(event) {
       ? `/api/metas/${editing.id}`
       : editing && editing.type === 'work'
         ? `/api/trabalhos/${editing.id}`
-      : paths[state.modalType];
+        : editing && editing.type === 'home'
+          ? `/api/casa/${editing.id}`
+          : paths[state.modalType];
   await api(path, { method, body: JSON.stringify(data) });
   state.editing = null;
   qs('#entityDialog').close();
@@ -1656,7 +1759,7 @@ function normalizeFormNumbers(data) {
   ['val', 'target', 'atual', 'salario', 'saldo', 'limite', 'usado', 'valor'].forEach(key => {
     if (key in data) data[key] = moneyValue(data[key]);
   });
-  ['rendimento'].forEach(key => {
+  ['rendimento', 'quantidade', 'minimo'].forEach(key => {
     if (key in data) data[key] = parseDecimal(data[key]);
   });
 }
@@ -1684,6 +1787,11 @@ function editGoal(id) {
 function editWork(id) {
   const item = state.data.trabalhos.find(work => work.id === id);
   if (item) openModal('work', item);
+}
+
+function editHome(id) {
+  const item = (state.data.casa || []).find(home => home.id === id);
+  if (item) openModal('home', item);
 }
 
 async function updateWorkStatus(id, status) {
@@ -1797,7 +1905,10 @@ function bindEvents() {
   qs('#notificationButton')?.addEventListener('click', () => qs('#notificationPopout')?.classList.toggle('show'));
   qsa('.nav-item').forEach(item => item.addEventListener('click', () => setPage(item.dataset.page)));
   qsa('[data-go]').forEach(item => item.addEventListener('click', () => setPage(item.dataset.go)));
-  qsa('[data-modal]').forEach(button => button.addEventListener('click', () => openModal(button.dataset.modal)));
+  qsa('[data-modal]').forEach(button => button.addEventListener('click', () => {
+    if (button.dataset.homeKind) state.homeKind = button.dataset.homeKind;
+    openModal(button.dataset.modal);
+  }));
   qsa('.finance-tab').forEach(button => {
     button.addEventListener('click', () => setFinanceTab(button.dataset.financeTab));
   });
@@ -1900,6 +2011,12 @@ function bindEvents() {
     const editWorkButton = event.target.closest('[data-edit-work]');
     if (editWorkButton) {
       editWork(editWorkButton.dataset.editWork);
+      return;
+    }
+
+    const editHomeButton = event.target.closest('[data-edit-home]');
+    if (editHomeButton) {
+      editHome(editHomeButton.dataset.editHome);
       return;
     }
 
