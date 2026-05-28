@@ -632,14 +632,6 @@ function statementPeriod(month) {
   return { start: `${month}-01`, end, label: `01/${String(monthIndex).padStart(2, '0')} a ${String(endDate.getDate()).padStart(2, '0')}/${String(monthIndex).padStart(2, '0')}` };
 }
 
-function csvCell(value) {
-  return `"${String(value ?? '').replace(/"/g, '""')}"`;
-}
-
-function csvMoney(value) {
-  return Number(value || 0).toFixed(2).replace('.', ',');
-}
-
 function downloadMonthlyStatement(month) {
   const period = statementPeriod(month);
   if (!period.start || !period.end) {
@@ -659,28 +651,81 @@ function downloadMonthlyStatement(month) {
   }
   const entradas = transactions.filter(item => item.tipo === 'entrada').reduce((sum, item) => sum + Number(item.val || 0), 0);
   const saidas = transactions.filter(item => item.tipo === 'saida').reduce((sum, item) => sum + Math.abs(Number(item.val || 0)), 0);
-  const rows = [
-    ['LASTTRO - Extrato mensal'],
-    [`Periodo: ${period.start} ate ${period.end}`],
-    [''],
-    ['Data', 'Tipo', 'Categoria', 'Nome', 'Valor'],
-    ...transactions.map(item => [item.data, item.tipo, item.cat, item.nome, csvMoney(item.val)]),
-    [''],
-    ['Entradas', '', '', '', csvMoney(entradas)],
-    ['Saidas', '', '', '', csvMoney(saidas)],
-    ['Resultado', '', '', '', csvMoney(entradas - saidas)]
+  const lines = [
+    { text: 'LASTTRO - Extrato mensal', size: 18 },
+    { text: `Periodo: ${period.start} ate ${period.end}`, size: 11 },
+    { text: `Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, size: 11 },
+    { text: '', size: 11 },
+    { text: `Entradas: ${formatMoney(entradas)}`, size: 12 },
+    { text: `Saidas: ${formatMoney(saidas)}`, size: 12 },
+    { text: `Resultado: ${formatMoney(entradas - saidas)}`, size: 12 },
+    { text: '', size: 11 },
+    { text: 'Movimentacoes', size: 14 },
+    { text: 'Data        Tipo       Categoria             Nome                         Valor', size: 10 },
+    ...transactions.map(item => ({
+      text: `${padText(item.data, 11)} ${padText(item.tipo, 10)} ${padText(item.cat || 'Sem categoria', 21)} ${padText(item.nome || 'Sem nome', 28)} ${formatMoney(item.val)}`,
+      size: 9
+    }))
   ];
-  const csv = rows.map(row => row.map(csvCell).join(';')).join('\r\n');
-  const blob = new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8' });
+  const blob = createStatementPdf(lines);
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `lasttro-extrato-${month}.csv`;
+  link.download = `lasttro-extrato-${month}.pdf`;
   document.body.appendChild(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
   showToast('Extrato baixado', `Periodo ${period.start} ate ${period.end}.`);
+}
+
+function padText(value, size) {
+  const text = String(value ?? '').slice(0, size);
+  return text.padEnd(size, ' ');
+}
+
+function pdfText(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\x20-\x7E]/g, '')
+    .replace(/[\\()]/g, '\\$&');
+}
+
+function createStatementPdf(lines) {
+  const pageChunks = [];
+  for (let i = 0; i < lines.length; i += 42) pageChunks.push(lines.slice(i, i + 42));
+  const fontObject = 3 + pageChunks.length * 2;
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    `<< /Type /Pages /Kids [${pageChunks.map((_, index) => `${3 + index * 2} 0 R`).join(' ')}] /Count ${pageChunks.length} >>`
+  ];
+
+  pageChunks.forEach((pageLines, index) => {
+    const pageObject = 3 + index * 2;
+    const contentObject = pageObject + 1;
+    const content = pageLines.map((line, lineIndex) => {
+      const y = 790 - lineIndex * 17;
+      return `BT /F1 ${line.size || 10} Tf 42 ${y} Td (${pdfText(line.text)}) Tj ET`;
+    }).join('\n');
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${fontObject} 0 R >> >> /Contents ${contentObject} 0 R >>`);
+    objects.push(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  });
+
+  objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+  let pdf = '%PDF-1.4\n';
+  const offsets = [0];
+  objects.forEach((object, index) => {
+    offsets.push(pdf.length);
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  offsets.slice(1).forEach(offset => {
+    pdf += `${String(offset).padStart(10, '0')} 00000 n \n`;
+  });
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return new Blob([pdf], { type: 'application/pdf' });
 }
 
 function updateTransactionCategoryOptions() {
