@@ -823,32 +823,63 @@ function insightTemplate(label, title, detail) {
   `;
 }
 
+function normalizeGoalItem(goal) {
+  const tipo = goal.tipo || 'dinheiro';
+  return {
+    ...goal,
+    tipo,
+    unidade: goal.unidade || (tipo === 'dinheiro' ? 'R$' : tipo === 'habito' ? 'dias' : tipo === 'estudo' ? 'horas' : 'itens'),
+    descricao: goal.descricao || ''
+  };
+}
+
+function goalProgress(goal) {
+  return Math.min(100, Math.round((Number(goal.atual || 0) / Math.max(Number(goal.target || 0), 1)) * 100));
+}
+
+function goalValue(goal, value) {
+  const item = normalizeGoalItem(goal);
+  return item.tipo === 'dinheiro' ? formatMoney(value) : `${Number(value || 0)} ${item.unidade}`;
+}
+
+function goalTypeLabel(tipo) {
+  return {
+    dinheiro: 'Dinheiro',
+    habito: 'Habito',
+    tarefa: 'Tarefa',
+    estudo: 'Estudo',
+    outro: 'Outro'
+  }[tipo] || 'Meta';
+}
+
 function renderGoals() {
-  const goals = state.data.metas;
-  const target = goals.reduce((sum, item) => sum + Number(item.target || 0), 0);
-  const current = goals.reduce((sum, item) => sum + Number(item.atual || 0), 0);
+  const goals = state.data.metas.map(normalizeGoalItem);
+  const moneyGoals = goals.filter(item => item.tipo === 'dinheiro');
+  const target = moneyGoals.reduce((sum, item) => sum + Number(item.target || 0), 0);
+  const current = moneyGoals.reduce((sum, item) => sum + Number(item.atual || 0), 0);
   const remaining = Math.max(0, target - current);
   const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
+  const completed = goals.filter(item => Number(item.atual) >= Number(item.target)).length;
 
   qs('#goalsOverview').innerHTML = `
     <article class="goal-summary-card primary">
-      <span>Progresso geral</span>
+      <span>Metas financeiras</span>
       <strong>${pct}%</strong>
       <small>${formatMoney(current)} acumulados de ${formatMoney(target)}</small>
       <div class="progress-line"><span style="width:${pct}%;background:linear-gradient(90deg,var(--green),var(--blue))"></span></div>
     </article>
     <article class="goal-summary-card">
-      <span>Falta guardar</span>
-      <strong>${formatMoney(remaining)}</strong>
-      <small>${goals.length} metas ativas</small>
+      <span>Total de metas</span>
+      <strong>${goals.length}</strong>
+      <small>${moneyGoals.length} financeiras · ${goals.length - moneyGoals.length} outras</small>
     </article>
     <article class="goal-summary-card">
       <span>Concluidas</span>
-      <strong>${goals.filter(item => Number(item.atual) >= Number(item.target)).length}</strong>
-      <small>objetivos batidos</small>
+      <strong>${completed}</strong>
+      <small>${formatMoney(remaining)} faltando nas financeiras</small>
     </article>
   `;
-  qs('#goalsList').innerHTML = state.data.metas.map(goalCardTemplate).join('') || emptyTemplate('Cadastre sua primeira meta.');
+  qs('#goalsList').innerHTML = goals.map(goalCardTemplate).join('') || emptyTemplate('Cadastre sua primeira meta.');
 }
 
 function renderWork() {
@@ -962,12 +993,13 @@ function transactionMiniTemplate(item) {
 }
 
 function goalMiniTemplate(goal) {
-  const pct = Math.min(100, Math.round((Number(goal.atual) / Math.max(Number(goal.target), 1)) * 100));
+  const item = normalizeGoalItem(goal);
+  const pct = goalProgress(item);
   return `
     <div class="mini-item">
-      <div class="mini-top"><strong>${escapeHtml(goal.nome)}</strong><span>${pct}%</span></div>
-      <div class="bar"><span style="width:${pct}%;background:${goal.cor}"></span></div>
-      <div class="mini-sub">${formatMoney(goal.atual)} de ${formatMoney(goal.target)}</div>
+      <div class="mini-top"><strong>${escapeHtml(item.nome)}</strong><span>${pct}%</span></div>
+      <div class="bar"><span style="width:${pct}%;background:${item.cor}"></span></div>
+      <div class="mini-sub">${goalValue(item, item.atual)} de ${goalValue(item, item.target)}</div>
     </div>
   `;
 }
@@ -1149,24 +1181,24 @@ function bankWithdrawalTemplate(item) {
 }
 
 function goalCardTemplate(goal) {
-  const pct = Math.min(100, Math.round((Number(goal.atual) / Math.max(Number(goal.target), 1)) * 100));
-  const remaining = Math.max(0, Number(goal.target || 0) - Number(goal.atual || 0));
+  const item = normalizeGoalItem(goal);
+  const pct = goalProgress(item);
+  const remaining = Math.max(0, Number(item.target || 0) - Number(item.atual || 0));
   return `
     <article class="list-card">
-      <div class="card-icon" style="background:${goal.cor}22;color:${goal.cor}"><i class="fa-regular fa-circle-dot"></i></div>
+      <div class="card-icon" style="background:${item.cor}22;color:${item.cor}"><i class="fa-regular fa-circle-dot"></i></div>
       <div class="card-main">
-        <strong>${escapeHtml(goal.nome)}</strong>
-        <span>${formatMoney(goal.atual)} de ${formatMoney(goal.target)} · ${escapeHtml(goal.deadline)}</span>
-        <span class="card-note">Falta ${formatMoney(remaining)}</span>
-        <div class="bar" style="margin-top:8px"><span style="width:${pct}%;background:${goal.cor}"></span></div>
+        <strong>${escapeHtml(item.nome)}</strong>
+        <span>${goalValue(item, item.atual)} de ${goalValue(item, item.target)} - ${escapeHtml(item.deadline)}</span>
+        <span class="card-note">${escapeHtml(goalTypeLabel(item.tipo))} - falta ${goalValue(item, remaining)}${item.descricao ? ` - ${escapeHtml(item.descricao)}` : ''}</span>
+        <div class="bar" style="margin-top:8px"><span style="width:${pct}%;background:${item.cor}"></span></div>
       </div>
       <span class="badge">${pct}%</span>
-      <button class="delete-button" data-edit-goal="${goal.id}" aria-label="Editar meta"><i class="fa-regular fa-pen-to-square"></i></button>
-      <button class="delete-button" data-delete="metas" data-id="${goal.id}" aria-label="Excluir meta"><i class="fa-regular fa-trash-can"></i></button>
+      <button class="delete-button" data-edit-goal="${item.id}" aria-label="Editar meta"><i class="fa-regular fa-pen-to-square"></i></button>
+      <button class="delete-button" data-delete="metas" data-id="${item.id}" aria-label="Excluir meta"><i class="fa-regular fa-trash-can"></i></button>
     </article>
   `;
 }
-
 function workCardTemplate(work) {
   const item = normalizeAcademicItem(work);
   const statusLabels = { ativo: 'Pendente', andamento: 'Em andamento', concluido: 'Concluido' };
@@ -1275,17 +1307,45 @@ function openModal(type, editItem = null) {
   }
 
   if (type === 'goal') {
-    const item = editItem || {};
+    const item = normalizeGoalItem(editItem || {});
     title.textContent = editItem ? 'Editar meta' : 'Nova meta';
+    fields.className = 'form-grid goal-editor-form';
     fields.innerHTML = `
-      <div class="form-section-title">Objetivo</div>
-      ${field('nome', 'Nome', 'text', item.nome || 'Ex: Reserva', true)}
-      ${field('deadline', 'Prazo', 'text', item.deadline || 'Dez 2026', false)}
-      <div class="form-section-title">Valores</div>
-      ${field('target', 'Valor alvo', 'number', item.target ?? '0', true)}
-      ${field('atual', 'Valor atual', 'number', item.atual ?? '0', false)}
-      ${field('cor', 'Cor', 'color', item.cor || '#4a9eff', false)}
+      <div class="goal-edit-hero">
+        <div>
+          <span>Meta</span>
+          <strong>${escapeHtml(item.nome || 'Nova meta')}</strong>
+        </div>
+        <i class="fa-regular fa-circle-dot"></i>
+      </div>
+      <section class="goal-edit-section">
+        <div class="goal-edit-title"><i class="fa-solid fa-bullseye"></i><span>Objetivo</span></div>
+        <div class="goal-edit-grid">
+          ${field('nome', 'Nome', 'text', item.nome || 'Ex: Ler 12 livros', true)}
+          <label>Tipo
+            <select name="tipo" id="goalTypeSelect">
+              <option value="dinheiro" ${item.tipo === 'dinheiro' ? 'selected' : ''}>Dinheiro</option>
+              <option value="habito" ${item.tipo === 'habito' ? 'selected' : ''}>Habito</option>
+              <option value="tarefa" ${item.tipo === 'tarefa' ? 'selected' : ''}>Tarefa</option>
+              <option value="estudo" ${item.tipo === 'estudo' ? 'selected' : ''}>Estudo</option>
+              <option value="outro" ${item.tipo === 'outro' ? 'selected' : ''}>Outro</option>
+            </select>
+          </label>
+          ${field('deadline', 'Prazo', 'text', item.deadline || 'Dez 2026', false)}
+          ${field('unidade', 'Unidade', 'text', item.unidade || 'itens', false)}
+        </div>
+      </section>
+      <section class="goal-edit-section">
+        <div class="goal-edit-title"><i class="fa-solid fa-chart-simple"></i><span>Progresso</span></div>
+        <div class="goal-edit-grid">
+          ${field('target', 'Alvo', 'number', item.target ?? '0', true)}
+          ${field('atual', 'Atual', 'number', item.atual ?? '0', false)}
+          ${field('cor', 'Cor', 'color', item.cor || '#4a9eff', false)}
+        </div>
+        <label>Descricao<textarea name="descricao" rows="3" placeholder="Ex: motivo, regra ou detalhe da meta">${escapeHtml(item.descricao || '')}</textarea></label>
+      </section>
     `;
+    updateGoalUnit();
   }
 
   if (type === 'work') {
@@ -1541,6 +1601,13 @@ function updateWithdrawSimulation() {
   total.textContent = formatMoney(value * 1.04);
 }
 
+function updateGoalUnit() {
+  const type = qs('#goalTypeSelect')?.value;
+  const unit = qs('[name="unidade"]');
+  if (!type || !unit || unit.value) return;
+  unit.value = type === 'dinheiro' ? 'R$' : type === 'habito' ? 'dias' : type === 'estudo' ? 'horas' : 'itens';
+}
+
 async function duplicateTransaction(id) {
   const item = state.data.transacoes.find(transaction => transaction.id === id);
   if (!item) return;
@@ -1658,6 +1725,10 @@ function bindEvents() {
   qs('#entityForm').addEventListener('change', event => {
     if (event.target.name === 'tipo') updateTransactionCategoryOptions();
     if (event.target.id === 'transactionCategorySelect') toggleCustomCategoryField();
+    if (event.target.id === 'goalTypeSelect') {
+      qs('[name="unidade"]').value = '';
+      updateGoalUnit();
+    }
   });
   qs('#entityForm').addEventListener('input', event => {
     if (state.modalType === 'bankWithdraw' && event.target.name === 'valor') updateWithdrawSimulation();

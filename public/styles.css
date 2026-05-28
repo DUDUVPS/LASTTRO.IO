@@ -2059,6 +2059,11 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
   gap: 14px;
 }
 
+.goal-editor-form {
+  gap: 14px;
+}
+
+.goal-edit-hero,
 .transaction-edit-hero,
 .withdraw-simulation {
   display: grid;
@@ -2071,12 +2076,14 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
     rgba(255,255,255,.03);
 }
 
+.goal-edit-hero,
 .transaction-edit-hero {
   min-height: 78px;
   grid-template-columns: 1fr auto;
   align-items: center;
 }
 
+.goal-edit-hero span,
 .transaction-edit-hero span,
 .withdraw-simulation > span {
   color: var(--blue);
@@ -2086,6 +2093,7 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
   font-weight: 800;
 }
 
+.goal-edit-hero strong,
 .transaction-edit-hero strong {
   display: block;
   margin-top: 5px;
@@ -2093,6 +2101,7 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
   font-size: 30px;
 }
 
+.goal-edit-hero i,
 .transaction-edit-hero i {
   width: 44px;
   height: 44px;
@@ -2103,6 +2112,7 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
   background: rgba(46,204,138,.12);
 }
 
+.goal-edit-section,
 .transaction-edit-section {
   display: grid;
   gap: 14px;
@@ -2110,6 +2120,33 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
   border: 1px solid var(--line);
   border-radius: 10px;
   background: rgba(255,255,255,.025);
+}
+
+.goal-edit-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.goal-edit-title i {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  color: var(--text);
+  background: rgba(255,255,255,.06);
+}
+
+.goal-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .transaction-type-toggle {
@@ -2242,6 +2279,7 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
   .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .email-grid { grid-template-columns: 1fr; }
   .statement-grid,
   .transaction-edit-grid,
+  .goal-edit-grid,
   .transaction-type-toggle {
     grid-template-columns: 1fr;
   }

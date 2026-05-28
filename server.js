@@ -422,13 +422,18 @@ function normalizeAccountCard(item) {
 }
 
 function normalizeGoal(item) {
+  const tipo = ['dinheiro', 'habito', 'tarefa', 'estudo', 'outro'].includes(item.tipo) ? item.tipo : 'dinheiro';
+  const unidade = String(item.unidade || (tipo === 'dinheiro' ? 'R$' : tipo === 'habito' ? 'dias' : tipo === 'estudo' ? 'horas' : 'itens')).trim();
   return {
     id: item.id || crypto.randomUUID(),
     nome: String(item.nome || 'Nova meta').trim(),
+    tipo,
+    unidade,
     target: moneyValue(item.target),
     atual: moneyValue(item.atual),
     cor: item.cor || '#4a9eff',
-    deadline: item.deadline || 'Sem prazo'
+    deadline: item.deadline || 'Sem prazo',
+    descricao: String(item.descricao || '').trim()
   };
 }
 
