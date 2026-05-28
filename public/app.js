@@ -1069,6 +1069,14 @@ function homeItemTemplate(item) {
   const meta = item.tipo === 'despensa'
     ? `${Number(item.quantidade || 0)} ${escapeHtml(item.unidade || 'un')} disponivel`
     : `${formatMoney(item.valor)}${item.vencimento ? ` - ${escapeHtml(item.vencimento)}` : ''}`;
+  const checklist = item.tipo === 'compra' && Array.isArray(item.itensCompra) && item.itensCompra.length
+    ? `<div class="home-checklist">${item.itensCompra.map((entry, index) => `
+        <label>
+          <input type="checkbox" data-toggle-home-item="${item.id}" data-item-index="${index}" ${entry.feito ? 'checked' : ''}>
+          <span>${escapeHtml(entry.nome)}</span>
+        </label>
+      `).join('')}</div>`
+    : '';
   return `
     <article class="home-item-card ${item.status === 'feito' ? 'done' : ''}">
       <div>
@@ -1081,9 +1089,20 @@ function homeItemTemplate(item) {
         <button class="delete-button" data-delete="casa" data-id="${item.id}" aria-label="Excluir item da casa"><i class="fa-regular fa-trash-can"></i></button>
       </div>
       ${item.observacao ? `<p>${escapeHtml(item.observacao)}</p>` : ''}
+      ${checklist}
       ${isMoney ? '' : `<div class="bar"><span style="width:${Math.min(100, (Number(item.quantidade || 0) / Math.max(Number(item.minimo || 1), 1)) * 100)}%;background:var(--green)"></span></div>`}
     </article>
   `;
+}
+
+function shoppingChecklistRows(items = []) {
+  const rows = items.length ? items : [{ nome: '', feito: false }];
+  return rows.map(item => `
+    <label class="shopping-edit-row">
+      <input type="checkbox" name="shoppingDone" ${item.feito ? 'checked' : ''}>
+      <input name="shoppingItem" type="text" value="${escapeHtml(item.nome || '')}" placeholder="Ex: arroz, leite, produto de limpeza">
+    </label>
+  `).join('');
 }
 
 function renderAcademicCalendar(works) {
@@ -1420,7 +1439,7 @@ function openModal(type, editItem = null) {
   const title = qs('#dialogTitle');
   const fields = qs('#formFields');
   const today = new Date().toISOString().slice(0, 10);
-  dialog.classList.toggle('wide-dialog', type === 'account');
+  dialog.classList.toggle('wide-dialog', ['account', 'home'].includes(type));
   fields.className = 'form-grid';
 
   if (type === 'transaction') {
@@ -1532,17 +1551,20 @@ function openModal(type, editItem = null) {
 
   if (type === 'home') {
     const item = editItem || { tipo: state.homeKind || 'despensa' };
+    const kindLabel = { despensa: 'Despensa', conta: 'Contas', compra: 'Compras' }[item.tipo] || 'Casa';
     title.textContent = editItem ? 'Editar item da casa' : 'Novo item da casa';
     fields.className = 'form-grid home-editor-form';
     fields.innerHTML = `
       <div class="home-edit-hero">
         <div>
-          <span>Casa</span>
+          <span>${escapeHtml(kindLabel)}</span>
           <strong>${escapeHtml(item.nome || 'Novo item')}</strong>
+          <small>Organize a casa sem misturar com financeiro ou faculdade.</small>
         </div>
         <i class="fa-solid fa-house-chimney"></i>
       </div>
       <section class="home-edit-section">
+        <div class="home-edit-title"><i class="fa-solid fa-layer-group"></i><span>Identificacao</span></div>
         <div class="home-edit-grid">
           ${field('nome', 'Nome', 'text', item.nome || 'Ex: Arroz, energia ou mercado', true)}
           <label>Area
@@ -1560,7 +1582,8 @@ function openModal(type, editItem = null) {
           </label>
         </div>
       </section>
-      <section class="home-edit-section">
+      <section class="home-edit-section home-stock-fields">
+        <div class="home-edit-title"><i class="fa-solid fa-boxes-stacked"></i><span>Controle</span></div>
         <div class="home-edit-grid three">
           ${field('quantidade', 'Quantidade', 'number', item.quantidade ?? '1', false)}
           ${field('minimo', 'Minimo ideal', 'number', item.minimo ?? '1', false)}
@@ -1568,9 +1591,21 @@ function openModal(type, editItem = null) {
           ${field('valor', 'Valor', 'number', item.valor ?? '0', false)}
           ${field('vencimento', 'Vencimento ou data', 'date', item.vencimento || '', false)}
         </div>
+      </section>
+      <section class="home-edit-section home-shopping-fields">
+        <div class="home-edit-title">
+          <i class="fa-solid fa-list-check"></i>
+          <span>Lista de compras</span>
+          <button class="pill-button" id="addShoppingItemButton" type="button"><i class="fa-solid fa-plus"></i><span>Item</span></button>
+        </div>
+        <div id="shoppingItemsEditor" class="shopping-edit-list">${shoppingChecklistRows(item.itensCompra)}</div>
+      </section>
+      <section class="home-edit-section">
+        <div class="home-edit-title"><i class="fa-regular fa-note-sticky"></i><span>Detalhes</span></div>
         <label>Observacao<textarea name="observacao" rows="3" placeholder="Detalhes, mercado, prioridade ou lembrete">${escapeHtml(item.observacao || '')}</textarea></label>
       </section>
     `;
+    updateHomeEditorMode();
   }
 
   if (type === 'account') {
@@ -1677,6 +1712,12 @@ async function submitModal(event) {
     data.recorrente = data.recorrente === 'true';
     delete data.catPreset;
     delete data.catCustom;
+  }
+  if (state.modalType === 'home') {
+    data.itensCompra = qsa('.shopping-edit-row').map(row => ({
+      nome: qs('[name="shoppingItem"]', row)?.value || '',
+      feito: Boolean(qs('[name="shoppingDone"]', row)?.checked)
+    })).filter(item => item.nome.trim());
   }
   normalizeFormNumbers(data);
   if (state.modalType === 'account') {
@@ -1792,6 +1833,37 @@ function editWork(id) {
 function editHome(id) {
   const item = (state.data.casa || []).find(home => home.id === id);
   if (item) openModal('home', item);
+}
+
+function addShoppingChecklistRow() {
+  const container = qs('#shoppingItemsEditor');
+  if (!container) return;
+  container.insertAdjacentHTML('beforeend', shoppingChecklistRows([{ nome: '', feito: false }]));
+  qs('.shopping-edit-row:last-child [name="shoppingItem"]', container)?.focus();
+}
+
+function updateHomeEditorMode() {
+  const type = qs('#homeTypeSelect')?.value;
+  const stock = qs('.home-stock-fields');
+  const shopping = qs('.home-shopping-fields');
+  if (!type || !stock || !shopping) return;
+  const isShopping = type === 'compra';
+  stock.classList.toggle('compact-home-section', isShopping);
+  shopping.classList.toggle('hidden', !isShopping);
+}
+
+async function toggleHomeChecklistItem(id, index, checked) {
+  const item = (state.data.casa || []).find(home => home.id === id);
+  if (!item || !Array.isArray(item.itensCompra) || !item.itensCompra[index]) return;
+  const updated = {
+    ...item,
+    itensCompra: item.itensCompra.map((entry, entryIndex) => entryIndex === index ? { ...entry, feito: checked } : entry)
+  };
+  await api(`/api/casa/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updated)
+  });
+  await loadDashboard();
 }
 
 async function updateWorkStatus(id, status) {
@@ -1948,6 +2020,7 @@ function bindEvents() {
       qs('[name="unidade"]').value = '';
       updateGoalUnit();
     }
+    if (event.target.id === 'homeTypeSelect') updateHomeEditorMode();
   });
   qs('#entityForm').addEventListener('input', event => {
     if (state.modalType === 'bankWithdraw' && event.target.name === 'valor') updateWithdrawSimulation();
@@ -1993,6 +2066,11 @@ function bindEvents() {
     if (categoryButton) {
       state.transactionCategory = categoryButton.dataset.category;
       renderFinance();
+      return;
+    }
+
+    if (event.target.closest('#addShoppingItemButton')) {
+      addShoppingChecklistRow();
       return;
     }
 
@@ -2046,6 +2124,12 @@ function bindEvents() {
     const button = event.target.closest('[data-delete]');
     if (!button) return;
     deleteEntity(button.dataset.delete, button.dataset.id);
+  });
+
+  document.body.addEventListener('change', event => {
+    const checklistItem = event.target.closest('[data-toggle-home-item]');
+    if (!checklistItem) return;
+    toggleHomeChecklistItem(checklistItem.dataset.toggleHomeItem, Number(checklistItem.dataset.itemIndex), checklistItem.checked);
   });
 }
 
