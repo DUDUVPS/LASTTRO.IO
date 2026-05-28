@@ -891,6 +891,148 @@ button { border: 0; cursor: pointer; }
 .finance-panel { display: none; }
 .finance-panel.active { display: block; }
 
+.health-overview {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.health-summary-card,
+.health-item-card,
+.health-edit-hero,
+.health-edit-section {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255,255,255,.03);
+}
+
+.health-summary-card {
+  min-height: 108px;
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.health-summary-card.primary {
+  background: linear-gradient(135deg, rgba(46,204,138,.16), rgba(74,158,255,.12));
+}
+
+.health-summary-card.evolution {
+  background: linear-gradient(135deg, rgba(240,180,60,.14), rgba(139,111,255,.12));
+}
+
+.health-summary-card span,
+.health-summary-card small,
+.health-item-card span,
+.health-edit-hero span,
+.health-edit-hero small,
+.health-edit-section label {
+  color: var(--muted);
+}
+
+.health-summary-card strong {
+  font-size: 28px;
+}
+
+.health-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.health-tab {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.health-tab.active,
+.health-tab:hover {
+  color: var(--green);
+  border-color: rgba(46,204,138,.35);
+  background: rgba(46,204,138,.1);
+}
+
+.health-panel { display: none; }
+.health-panel.active { display: block; }
+
+.health-list {
+  display: grid;
+  gap: 10px;
+}
+
+.health-item-card {
+  display: grid;
+  grid-template-columns: 44px 1fr auto auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+}
+
+.health-item-card.done {
+  opacity: .72;
+}
+
+.health-diet-total {
+  margin-bottom: 12px;
+  padding: 16px;
+  border: 1px solid rgba(46,204,138,.28);
+  border-radius: 8px;
+  color: var(--green);
+  background: rgba(46,204,138,.1);
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.health-edit-hero,
+.health-edit-section {
+  padding: 16px;
+}
+
+.health-edit-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, rgba(46,204,138,.14), rgba(74,158,255,.1));
+}
+
+.health-edit-hero strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 22px;
+}
+
+.health-edit-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.health-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.health-edit-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .finance-values {
   display: grid;
   grid-template-columns: minmax(280px, 1.15fr) minmax(320px, 1fr);
@@ -2470,7 +2612,7 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
   .main { min-height: 100vh; }
   .menu-button { display: inline-flex !important; }
   .content { padding: 16px; }
-  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .home-overview, .home-board, .home-edit-grid, .home-edit-grid.three, .email-grid { grid-template-columns: 1fr; }
+  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .health-tabs, .health-overview, .health-edit-grid, .health-edit-grid.three, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .home-overview, .home-board, .home-edit-grid, .home-edit-grid.three, .email-grid { grid-template-columns: 1fr; }
   .statement-grid,
   .transaction-edit-grid,
   .goal-edit-grid,
@@ -2489,6 +2631,13 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
   .cashflow-grid article + article { border-top: 1px solid var(--line); padding-left: 0; }
   .list-card { grid-template-columns: auto 1fr auto; }
   .list-card .delete-button { grid-column: 3; }
+  .health-item-card {
+    grid-template-columns: 44px 1fr auto;
+  }
+  .health-item-card .badge {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
   .bank-account-card { min-height: 0; padding: 16px; gap: 14px; }
   .bank-account-top { align-items: flex-start; }
   .bank-card-section { min-height: 112px; padding: 16px; }

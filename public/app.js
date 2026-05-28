@@ -2,6 +2,7 @@ const state = {
   data: null,
   page: 'overview',
   financeTab: 'account',
+  healthTab: 'alimentacao',
   transactionFilter: 'todos',
   transactionCategory: 'todas',
   transactionSearch: '',
@@ -12,6 +13,7 @@ const state = {
   modalType: null,
   editing: null,
   homeKind: 'despensa',
+  healthKind: 'alimentacao',
   gmailStatus: null,
   gmailMessages: [],
   authMode: 'login',
@@ -24,6 +26,7 @@ const pages = {
   finance: { title: 'Financeiro', subtitle: 'entradas, saidas e investimentos' },
   goals: { title: 'Metas', subtitle: 'objetivos e progresso' },
   work: { title: 'Faculdade', subtitle: 'provas, trabalhos e anotacoes' },
+  health: { title: 'Saude', subtitle: 'alimentacao, treino e evolucao' },
   home: { title: 'Casa', subtitle: 'despensa, contas e compras' },
   email: { title: 'Email', subtitle: 'atalhos e mensagens pelo Gmail' }
 };
@@ -390,6 +393,7 @@ function renderAll() {
   renderFinance();
   renderGoals();
   renderWork();
+  renderHealth();
   renderHome();
   renderEmail();
   renderSmartSuggestions();
@@ -1032,6 +1036,104 @@ function renderWork() {
   renderAcademicCalendar(works);
 }
 
+function renderHealth() {
+  const items = state.data.saude || [];
+  const today = new Date().toISOString().slice(0, 10);
+  const foodToday = items
+    .filter(item => ['alimentacao', 'dieta'].includes(item.tipo) && item.data === today)
+    .reduce((sum, item) => sum + Number(item.calorias || 0), 0);
+  const waterToday = items
+    .filter(item => item.tipo === 'hidratacao' && item.data === today)
+    .reduce((sum, item) => sum + Number(item.quantidade || 0), 0);
+  const workoutToday = items
+    .filter(item => item.tipo === 'treino' && item.data === today)
+    .reduce((sum, item) => sum + Number(item.duracao || 0), 0);
+  const medicineOpen = items.filter(item => item.tipo === 'medicamentos' && item.status !== 'feito').length;
+  const workoutCalories = items
+    .filter(item => item.tipo === 'treino')
+    .reduce((sum, item) => sum + Number(item.calorias || 0), 0);
+  const foodCalories = items
+    .filter(item => ['alimentacao', 'dieta'].includes(item.tipo))
+    .reduce((sum, item) => sum + Number(item.calorias || 0), 0);
+
+  qs('#healthOverview').innerHTML = `
+    <article class="health-summary-card primary">
+      <span>Kcal do dia</span>
+      <strong>${Math.round(foodToday)}</strong>
+      <small>alimentacao + dieta</small>
+    </article>
+    <article class="health-summary-card">
+      <span>Hidratacao</span>
+      <strong>${Math.round(waterToday)} ml</strong>
+      <small>registrado hoje</small>
+    </article>
+    <article class="health-summary-card">
+      <span>Treino</span>
+      <strong>${Math.round(workoutToday)} min</strong>
+      <small>tempo de treino hoje</small>
+    </article>
+    <article class="health-summary-card">
+      <span>Medicamentos</span>
+      <strong>${medicineOpen}</strong>
+      <small>pendentes</small>
+    </article>
+    <article class="health-summary-card evolution">
+      <span>Evolucao</span>
+      <strong>${Math.max(0, Math.round(foodCalories - workoutCalories))} kcal</strong>
+      <small>alimentacao menos treino registrado</small>
+    </article>
+  `;
+
+  renderHealthPanel('alimentacao', 'Alimentacao', items.filter(item => item.tipo === 'alimentacao'));
+  renderHealthPanel('medicamentos', 'Medicamentos', items.filter(item => item.tipo === 'medicamentos'));
+  renderHealthPanel('hidratacao', 'Hidratacao', items.filter(item => item.tipo === 'hidratacao'));
+  renderHealthPanel('treino', 'Treino', items.filter(item => item.tipo === 'treino'));
+  renderHealthPanel('dieta', 'Dieta', items.filter(item => item.tipo === 'dieta'), `${Math.round(foodToday)} kcal hoje`);
+}
+
+function renderHealthPanel(type, title, items, detail = '') {
+  const panel = qs(`#health-tab-${type}`);
+  if (!panel) return;
+  panel.innerHTML = `
+    <div class="list-header">
+      <span>${escapeHtml(title)}</span>
+      <button class="pill-button" data-modal="health" data-health-kind="${type}"><i class="fa-solid fa-plus"></i><span>Adicionar</span></button>
+    </div>
+    ${detail ? `<div class="health-diet-total">${escapeHtml(detail)}</div>` : ''}
+    <div class="health-list">${items.map(healthItemTemplate).join('') || emptyTemplate(`Nenhum registro em ${title.toLowerCase()}.`)}</div>
+  `;
+}
+
+function healthItemTemplate(item) {
+  const icon = {
+    alimentacao: 'fa-utensils',
+    medicamentos: 'fa-capsules',
+    hidratacao: 'fa-droplet',
+    treino: 'fa-dumbbell',
+    dieta: 'fa-bowl-food'
+  }[item.tipo] || 'fa-heart-pulse';
+  const details = [
+    item.data,
+    item.horario,
+    item.quantidade ? `${Number(item.quantidade)} ${escapeHtml(item.unidade || '')}` : '',
+    item.duracao ? `${Number(item.duracao)} min` : '',
+    item.calorias ? `${Number(item.calorias)} kcal` : ''
+  ].filter(Boolean).join(' - ');
+  return `
+    <article class="health-item-card ${item.status === 'feito' ? 'done' : ''}">
+      <div class="card-icon"><i class="fa-solid ${icon}"></i></div>
+      <div class="card-main">
+        <strong>${escapeHtml(item.nome)}</strong>
+        <span>${escapeHtml(details || 'Sem detalhes')}</span>
+        ${item.observacao ? `<span class="card-note">${escapeHtml(item.observacao)}</span>` : ''}
+      </div>
+      <span class="badge">${item.status === 'feito' ? 'Feito' : 'Aberto'}</span>
+      <button class="delete-button" data-edit-health="${item.id}" aria-label="Editar registro"><i class="fa-regular fa-pen-to-square"></i></button>
+      <button class="delete-button" data-delete="saude" data-id="${item.id}" aria-label="Excluir registro"><i class="fa-regular fa-trash-can"></i></button>
+    </article>
+  `;
+}
+
 function renderHome() {
   const items = state.data.casa || [];
   const pantry = items.filter(item => item.tipo === 'despensa');
@@ -1385,7 +1487,6 @@ function goalCardTemplate(goal) {
 }
 function workCardTemplate(work) {
   const item = normalizeAcademicItem(work);
-  const statusLabels = { ativo: 'Pendente', andamento: 'Em andamento', concluido: 'Concluido' };
   const kind = academicKind(item);
   const icon = kind === 'prova' ? 'fa-file-pen' : kind === 'anotacao' ? 'fa-note-sticky' : 'fa-list-check';
   return `
@@ -1402,7 +1503,6 @@ function workCardTemplate(work) {
       </div>
       <div class="work-money"><i class="fa-solid ${icon}"></i>${escapeHtml(item.tipo)}</div>
       <div class="work-metrics">
-        <span>${statusLabels[item.status] || item.status}</span>
         ${item.horas ? `<span>${item.horas}h de estudo</span>` : ''}
         ${Number(item.salario || 0) ? `<span>Nota/peso ${Number(item.salario || 0)}</span>` : ''}
       </div>
@@ -1432,6 +1532,13 @@ function setFinanceTab(tabName) {
   renderFinancePrimaryAction();
 }
 
+function setHealthTab(tabName) {
+  state.healthTab = tabName;
+  state.healthKind = tabName;
+  qsa('.health-tab').forEach(button => button.classList.toggle('active', button.dataset.healthTab === tabName));
+  qsa('.health-panel').forEach(panel => panel.classList.toggle('active', panel.id === `health-tab-${tabName}`));
+}
+
 function openModal(type, editItem = null) {
   state.modalType = type;
   state.editing = editItem?.id ? { type, id: editItem.id } : null;
@@ -1439,7 +1546,7 @@ function openModal(type, editItem = null) {
   const title = qs('#dialogTitle');
   const fields = qs('#formFields');
   const today = new Date().toISOString().slice(0, 10);
-  dialog.classList.toggle('wide-dialog', ['account', 'home'].includes(type));
+  dialog.classList.toggle('wide-dialog', ['account', 'home', 'health'].includes(type));
   fields.className = 'form-grid';
 
   if (type === 'transaction') {
@@ -1540,7 +1647,6 @@ function openModal(type, editItem = null) {
       ${field('nome', 'Titulo', 'text', item.nome || 'Ex: Prova de calculo', true)}
       <label>Tipo<select name="tipo"><option value="Prova" ${item.tipo === 'Prova' ? 'selected' : ''}>Prova</option><option value="Trabalho" ${item.tipo === 'Trabalho' ? 'selected' : ''}>Trabalho</option><option value="Anotacao" ${item.tipo === 'Anotacao' ? 'selected' : ''}>Anotacao</option></select></label>
       ${field('disciplina', 'Materia', 'text', item.disciplina || item.area || 'Ex: Matematica', false)}
-      <label>Status<select name="status"><option value="ativo" ${item.status === 'ativo' ? 'selected' : ''}>Pendente</option><option value="andamento" ${item.status === 'andamento' ? 'selected' : ''}>Em andamento</option><option value="concluido" ${item.status === 'concluido' ? 'selected' : ''}>Concluido</option></select></label>
       <div class="form-section-title">Prazo e detalhes</div>
       ${field('inicio', 'Data ou prazo', 'date', item.inicio || today, true)}
       ${field('horas', 'Horas de estudo', 'number', item.horas ?? '0', false)}
@@ -1606,6 +1712,63 @@ function openModal(type, editItem = null) {
       </section>
     `;
     updateHomeEditorMode();
+  }
+
+  if (type === 'health') {
+    const item = editItem || { tipo: state.healthKind || state.healthTab || 'alimentacao', data: today };
+    const labels = {
+      alimentacao: 'Alimentacao',
+      medicamentos: 'Medicamentos',
+      hidratacao: 'Hidratacao',
+      treino: 'Treino',
+      dieta: 'Dieta'
+    };
+    title.textContent = editItem ? 'Editar registro de saude' : 'Novo registro de saude';
+    fields.className = 'form-grid health-editor-form';
+    fields.innerHTML = `
+      <div class="health-edit-hero">
+        <div>
+          <span>${escapeHtml(labels[item.tipo] || 'Saude')}</span>
+          <strong>${escapeHtml(item.nome || 'Novo registro')}</strong>
+          <small>Registre dados simples para acompanhar sua rotina.</small>
+        </div>
+        <i class="fa-solid fa-heart-pulse"></i>
+      </div>
+      <section class="health-edit-section">
+        <div class="health-edit-title"><i class="fa-solid fa-layer-group"></i><span>Registro</span></div>
+        <div class="health-edit-grid">
+          ${field('nome', 'Nome', 'text', item.nome || 'Ex: Almoco, remedio, treino de peito', true)}
+          <label>Area
+            <select name="tipo" id="healthTypeSelect">
+              <option value="alimentacao" ${item.tipo === 'alimentacao' ? 'selected' : ''}>Alimentacao</option>
+              <option value="medicamentos" ${item.tipo === 'medicamentos' ? 'selected' : ''}>Medicamentos</option>
+              <option value="hidratacao" ${item.tipo === 'hidratacao' ? 'selected' : ''}>Hidratacao</option>
+              <option value="treino" ${item.tipo === 'treino' ? 'selected' : ''}>Treino</option>
+              <option value="dieta" ${item.tipo === 'dieta' ? 'selected' : ''}>Dieta</option>
+            </select>
+          </label>
+          ${field('data', 'Data', 'date', item.data || today, true)}
+          ${field('horario', 'Horario', 'time', item.horario || '', false)}
+          <label>Status
+            <select name="status">
+              <option value="pendente" ${item.status !== 'feito' ? 'selected' : ''}>Pendente</option>
+              <option value="feito" ${item.status === 'feito' ? 'selected' : ''}>Feito</option>
+            </select>
+          </label>
+        </div>
+      </section>
+      <section class="health-edit-section">
+        <div class="health-edit-title"><i class="fa-solid fa-chart-simple"></i><span>Dados</span></div>
+        <div class="health-edit-grid three">
+          ${field('calorias', 'Kcal', 'number', item.calorias ?? '0', false)}
+          ${field('quantidade', 'Quantidade', 'number', item.quantidade ?? '0', false)}
+          ${field('unidade', 'Unidade', 'text', item.unidade || 'ml', false)}
+          ${field('duracao', 'Duracao do treino (min)', 'number', item.duracao ?? '0', false)}
+          ${field('dose', 'Dose', 'text', item.dose || '', false)}
+        </div>
+        <label>Observacao<textarea name="observacao" rows="3" placeholder="Ex: como foi, sintomas, serie do treino ou alimentos">${escapeHtml(item.observacao || '')}</textarea></label>
+      </section>
+    `;
   }
 
   if (type === 'account') {
@@ -1693,7 +1856,7 @@ function openModal(type, editItem = null) {
 }
 
 function field(name, label, type, value, required) {
-  const decimalFields = ['val', 'target', 'atual', 'salario', 'saldo', 'limite', 'usado', 'valor', 'rendimento', 'quantidade', 'minimo'];
+  const decimalFields = ['val', 'target', 'atual', 'salario', 'saldo', 'limite', 'usado', 'valor', 'rendimento', 'quantidade', 'minimo', 'calorias', 'duracao'];
   const inputType = type === 'number' && decimalFields.includes(name) ? 'text' : type;
   const decimalAttrs = inputType === 'text' && decimalFields.includes(name) ? ' inputmode="decimal"' : '';
   const step = type === 'number' && inputType === 'number' ? ' step="1"' : '';
@@ -1732,6 +1895,7 @@ async function submitModal(event) {
     goal: '/api/metas',
     work: '/api/trabalhos',
     home: '/api/casa',
+    health: '/api/saude',
     account: '/api/contas-cartoes',
     investment: '/api/investimentos',
     bankDeposit: '/api/banco/depositar',
@@ -1747,7 +1911,9 @@ async function submitModal(event) {
         ? `/api/trabalhos/${editing.id}`
         : editing && editing.type === 'home'
           ? `/api/casa/${editing.id}`
-          : paths[state.modalType];
+          : editing && editing.type === 'health'
+            ? `/api/saude/${editing.id}`
+            : paths[state.modalType];
   await api(path, { method, body: JSON.stringify(data) });
   state.editing = null;
   qs('#entityDialog').close();
@@ -1800,7 +1966,7 @@ function normalizeFormNumbers(data) {
   ['val', 'target', 'atual', 'salario', 'saldo', 'limite', 'usado', 'valor'].forEach(key => {
     if (key in data) data[key] = moneyValue(data[key]);
   });
-  ['rendimento', 'quantidade', 'minimo'].forEach(key => {
+  ['rendimento', 'quantidade', 'minimo', 'calorias', 'duracao'].forEach(key => {
     if (key in data) data[key] = parseDecimal(data[key]);
   });
 }
@@ -1833,6 +1999,11 @@ function editWork(id) {
 function editHome(id) {
   const item = (state.data.casa || []).find(home => home.id === id);
   if (item) openModal('home', item);
+}
+
+function editHealth(id) {
+  const item = (state.data.saude || []).find(health => health.id === id);
+  if (item) openModal('health', item);
 }
 
 function addShoppingChecklistRow() {
@@ -1977,12 +2148,17 @@ function bindEvents() {
   qs('#notificationButton')?.addEventListener('click', () => qs('#notificationPopout')?.classList.toggle('show'));
   qsa('.nav-item').forEach(item => item.addEventListener('click', () => setPage(item.dataset.page)));
   qsa('[data-go]').forEach(item => item.addEventListener('click', () => setPage(item.dataset.go)));
-  qsa('[data-modal]').forEach(button => button.addEventListener('click', () => {
+  qsa('[data-modal]').forEach(button => button.addEventListener('click', event => {
+    event.stopPropagation();
     if (button.dataset.homeKind) state.homeKind = button.dataset.homeKind;
+    if (button.dataset.healthKind) state.healthKind = button.dataset.healthKind;
     openModal(button.dataset.modal);
   }));
   qsa('.finance-tab').forEach(button => {
     button.addEventListener('click', () => setFinanceTab(button.dataset.financeTab));
+  });
+  qsa('.health-tab').forEach(button => {
+    button.addEventListener('click', () => setHealthTab(button.dataset.healthTab));
   });
   qsa('.filter').forEach(button => {
     button.addEventListener('click', () => {
@@ -2062,6 +2238,14 @@ function bindEvents() {
   });
 
   document.body.addEventListener('click', event => {
+    const modalButton = event.target.closest('[data-modal]');
+    if (modalButton) {
+      if (modalButton.dataset.homeKind) state.homeKind = modalButton.dataset.homeKind;
+      if (modalButton.dataset.healthKind) state.healthKind = modalButton.dataset.healthKind;
+      openModal(modalButton.dataset.modal);
+      return;
+    }
+
     const categoryButton = event.target.closest('[data-category]');
     if (categoryButton) {
       state.transactionCategory = categoryButton.dataset.category;
@@ -2095,6 +2279,12 @@ function bindEvents() {
     const editHomeButton = event.target.closest('[data-edit-home]');
     if (editHomeButton) {
       editHome(editHomeButton.dataset.editHome);
+      return;
+    }
+
+    const editHealthButton = event.target.closest('[data-edit-health]');
+    if (editHealthButton) {
+      editHealth(editHealthButton.dataset.editHealth);
       return;
     }
 

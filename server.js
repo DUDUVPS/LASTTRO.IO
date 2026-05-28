@@ -35,6 +35,7 @@ const initialData = {
     { id: 'j1', nome: 'Empresa Principal', tipo: 'CLT', status: 'ativo', salario: 700, horas: 44, inicio: '2025-01-01' },
     { id: 'j2', nome: 'Freela Dev', tipo: 'Freelancer', status: 'andamento', salario: 169, horas: 8, inicio: '2026-05-10' }
   ],
+  saude: [],
   casa: [],
   contasCartoes: [
     { id: 'c1', nome: 'Inter principal', tipo: 'conta', bandeira: 'Conta corrente', saldo: 1421, limite: 0, usado: 0, vencimento: 1 },
@@ -177,6 +178,7 @@ function blankUserData() {
     transacoes: [],
     metas: [],
     trabalhos: [],
+    saude: [],
     casa: [],
     contasCartoes: [],
     investimentosCarteira: [],
@@ -370,6 +372,7 @@ function withDefaults(db) {
     transacoes: db.transacoes || [],
     metas: db.metas || [],
     trabalhos: db.trabalhos || [],
+    saude: db.saude || [],
     casa: db.casa || [],
     contasCartoes: db.contasCartoes || initialData.contasCartoes,
     investimentosCarteira: db.investimentosCarteira || initialData.investimentosCarteira,
@@ -393,6 +396,7 @@ function normalizeUserData(data = {}) {
     transacoes: data.transacoes || [],
     metas: data.metas || [],
     trabalhos: data.trabalhos || [],
+    saude: (data.saude || []).map(normalizeHealthItem),
     casa: (data.casa || []).map(normalizeHomeItem),
     contasCartoes: (data.contasCartoes || []).map(normalizeAccountCard),
     investimentosCarteira: (data.investimentosCarteira || []).map(normalizeInvestment),
@@ -472,10 +476,28 @@ function normalizeWork(item) {
     tipo: String(item.tipo || 'Trabalho').trim(),
     disciplina: String(item.disciplina || '').trim(),
     anotacao: String(item.anotacao || '').trim(),
-    status: ['ativo', 'andamento', 'concluido'].includes(item.status) ? item.status : 'andamento',
+    status: ['ativo', 'andamento', 'concluido'].includes(item.status) ? item.status : 'ativo',
     salario: moneyValue(item.salario),
     horas: parseDecimal(item.horas, 0),
     inicio: item.inicio || new Date().toISOString().slice(0, 10)
+  };
+}
+
+function normalizeHealthItem(item) {
+  const tipo = ['alimentacao', 'medicamentos', 'hidratacao', 'treino', 'dieta'].includes(item.tipo) ? item.tipo : 'alimentacao';
+  return {
+    id: item.id || crypto.randomUUID(),
+    tipo,
+    nome: String(item.nome || 'Novo registro').trim(),
+    data: item.data || new Date().toISOString().slice(0, 10),
+    horario: String(item.horario || '').trim(),
+    calorias: parseDecimal(item.calorias, 0),
+    quantidade: parseDecimal(item.quantidade, 0),
+    unidade: String(item.unidade || (tipo === 'hidratacao' ? 'ml' : '')).trim(),
+    duracao: parseDecimal(item.duracao, 0),
+    dose: String(item.dose || '').trim(),
+    status: item.status === 'feito' ? 'feito' : 'pendente',
+    observacao: String(item.observacao || '').trim()
   };
 }
 
@@ -775,7 +797,7 @@ async function handleApi(req, res, pathname) {
     return send(res, 200, { ...data, user: publicUser(currentUser || { email: userEmail }), resumo: buildResumo(data) });
   }
 
-  if (req.method === 'GET' && ['transacoes', 'metas', 'trabalhos', 'casa'].includes(collection)) {
+  if (req.method === 'GET' && ['transacoes', 'metas', 'trabalhos', 'saude', 'casa'].includes(collection)) {
     return send(res, 200, data[collection]);
   }
 
@@ -804,6 +826,13 @@ async function handleApi(req, res, pathname) {
   if (req.method === 'POST' && collection === 'trabalhos') {
     const created = normalizeWork(await readBody(req));
     data.trabalhos.unshift(created);
+    await writeDb(db);
+    return send(res, 201, created);
+  }
+
+  if (req.method === 'POST' && collection === 'saude') {
+    const created = normalizeHealthItem(await readBody(req));
+    data.saude.unshift(created);
     await writeDb(db);
     return send(res, 201, created);
   }
@@ -868,7 +897,7 @@ async function handleApi(req, res, pathname) {
     return send(res, 200, retirada);
   }
 
-  const match = pathname.match(/^\/api\/(transacoes|metas|trabalhos|casa|contas-cartoes|investimentos)\/([^/]+)$/);
+  const match = pathname.match(/^\/api\/(transacoes|metas|trabalhos|saude|casa|contas-cartoes|investimentos)\/([^/]+)$/);
   if (match && req.method === 'PUT') {
     const [, name, id] = match;
     const body = await readBody(req);
@@ -892,6 +921,13 @@ async function handleApi(req, res, pathname) {
       data.trabalhos[index] = normalizeWork({ ...data.trabalhos[index], ...body, id });
       await writeDb(db);
       return send(res, 200, data.trabalhos[index]);
+    }
+    if (name === 'saude') {
+      const index = data.saude.findIndex(item => item.id === id);
+      if (index === -1) return send(res, 404, { error: 'Registro de saude nao encontrado' });
+      data.saude[index] = normalizeHealthItem({ ...data.saude[index], ...body, id });
+      await writeDb(db);
+      return send(res, 200, data.saude[index]);
     }
     if (name === 'casa') {
       const index = data.casa.findIndex(item => item.id === id);

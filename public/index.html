@@ -63,6 +63,7 @@
         <button class="nav-item" data-page="finance"><i class="fa-regular fa-credit-card"></i><span>Financeiro</span></button>
         <button class="nav-item" data-page="goals"><i class="fa-regular fa-circle-dot"></i><span>Metas</span></button>
         <button class="nav-item" data-page="work"><i class="fa-solid fa-graduation-cap"></i><span>Faculdade</span></button>
+        <button class="nav-item" data-page="health"><i class="fa-solid fa-heart-pulse"></i><span>Saude</span></button>
         <button class="nav-item" data-page="home"><i class="fa-solid fa-house-chimney"></i><span>Casa</span></button>
         <button class="nav-item" data-page="email"><i class="fa-regular fa-envelope"></i><span>Email</span></button>
       </nav>
@@ -412,6 +413,29 @@
               <div id="gmailMessages" class="gmail-list"></div>
             </article>
           </section>
+        </div>
+
+        <div class="view" id="view-health">
+          <section class="section-head">
+            <div>
+              <h2>Saude</h2>
+              <p>Alimentacao, medicamentos, hidratacao, treino e dieta.</p>
+            </div>
+            <button class="primary-button" data-modal="health"><i class="fa-solid fa-plus"></i><span>Registro</span></button>
+          </section>
+          <section class="health-overview" id="healthOverview"></section>
+          <div class="health-tabs">
+            <button class="health-tab active" data-health-tab="alimentacao"><i class="fa-solid fa-utensils"></i><span>Alimentacao</span></button>
+            <button class="health-tab" data-health-tab="medicamentos"><i class="fa-solid fa-capsules"></i><span>Medicamentos</span></button>
+            <button class="health-tab" data-health-tab="hidratacao"><i class="fa-solid fa-droplet"></i><span>Hidratacao</span></button>
+            <button class="health-tab" data-health-tab="treino"><i class="fa-solid fa-dumbbell"></i><span>Treino</span></button>
+            <button class="health-tab" data-health-tab="dieta"><i class="fa-solid fa-bowl-food"></i><span>Dieta</span></button>
+          </div>
+          <div class="health-panel active" id="health-tab-alimentacao"></div>
+          <div class="health-panel" id="health-tab-medicamentos"></div>
+          <div class="health-panel" id="health-tab-hidratacao"></div>
+          <div class="health-panel" id="health-tab-treino"></div>
+          <div class="health-panel" id="health-tab-dieta"></div>
         </div>
 
         <div class="view" id="view-home">
