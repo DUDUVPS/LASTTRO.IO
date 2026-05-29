@@ -1535,7 +1535,7 @@ function setFinanceTab(tabName) {
 function setHealthTab(tabName) {
   state.healthTab = tabName;
   state.healthKind = tabName;
-  qsa('.health-tab').forEach(button => button.classList.toggle('active', button.dataset.healthTab === tabName));
+  qsa('.nav-sub-item[data-health-nav]').forEach(button => button.classList.toggle('active', button.dataset.healthNav === tabName));
   qsa('.health-panel').forEach(panel => panel.classList.toggle('active', panel.id === `health-tab-${tabName}`));
 }
 
@@ -2157,8 +2157,11 @@ function bindEvents() {
   qsa('.finance-tab').forEach(button => {
     button.addEventListener('click', () => setFinanceTab(button.dataset.financeTab));
   });
-  qsa('.health-tab').forEach(button => {
-    button.addEventListener('click', () => setHealthTab(button.dataset.healthTab));
+  qsa('[data-health-nav]').forEach(button => {
+    button.addEventListener('click', () => {
+      setPage('health');
+      setHealthTab(button.dataset.healthNav);
+    });
   });
   qsa('.filter').forEach(button => {
     button.addEventListener('click', () => {

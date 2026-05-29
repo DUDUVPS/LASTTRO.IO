@@ -64,6 +64,13 @@
         <button class="nav-item" data-page="goals"><i class="fa-regular fa-circle-dot"></i><span>Metas</span></button>
         <button class="nav-item" data-page="work"><i class="fa-solid fa-graduation-cap"></i><span>Faculdade</span></button>
         <button class="nav-item" data-page="health"><i class="fa-solid fa-heart-pulse"></i><span>Saude</span></button>
+        <div class="nav-sub" id="healthSubnav">
+          <button class="nav-sub-item active" data-health-nav="alimentacao"><i class="fa-solid fa-utensils"></i><span>Alimentacao</span></button>
+          <button class="nav-sub-item" data-health-nav="medicamentos"><i class="fa-solid fa-capsules"></i><span>Medicamentos</span></button>
+          <button class="nav-sub-item" data-health-nav="hidratacao"><i class="fa-solid fa-droplet"></i><span>Hidratacao</span></button>
+          <button class="nav-sub-item" data-health-nav="treino"><i class="fa-solid fa-dumbbell"></i><span>Treino</span></button>
+          <button class="nav-sub-item" data-health-nav="dieta"><i class="fa-solid fa-bowl-food"></i><span>Dieta</span></button>
+        </div>
         <button class="nav-item" data-page="home"><i class="fa-solid fa-house-chimney"></i><span>Casa</span></button>
         <button class="nav-item" data-page="email"><i class="fa-regular fa-envelope"></i><span>Email</span></button>
       </nav>
@@ -424,13 +431,6 @@
             <button class="primary-button" data-modal="health"><i class="fa-solid fa-plus"></i><span>Registro</span></button>
           </section>
           <section class="health-overview" id="healthOverview"></section>
-          <div class="health-tabs">
-            <button class="health-tab active" data-health-tab="alimentacao"><i class="fa-solid fa-utensils"></i><span>Alimentacao</span></button>
-            <button class="health-tab" data-health-tab="medicamentos"><i class="fa-solid fa-capsules"></i><span>Medicamentos</span></button>
-            <button class="health-tab" data-health-tab="hidratacao"><i class="fa-solid fa-droplet"></i><span>Hidratacao</span></button>
-            <button class="health-tab" data-health-tab="treino"><i class="fa-solid fa-dumbbell"></i><span>Treino</span></button>
-            <button class="health-tab" data-health-tab="dieta"><i class="fa-solid fa-bowl-food"></i><span>Dieta</span></button>
-          </div>
           <div class="health-panel active" id="health-tab-alimentacao"></div>
           <div class="health-panel" id="health-tab-medicamentos"></div>
           <div class="health-panel" id="health-tab-hidratacao"></div>

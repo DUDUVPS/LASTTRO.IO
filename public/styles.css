@@ -223,6 +223,49 @@ button { border: 0; cursor: pointer; }
 .nav-item:hover, .nav-item.active { background: rgba(74,158,255,.1); color: var(--blue); }
 .sidebar.collapsed .nav-item { justify-content: center; padding: 0; }
 
+.nav-sub {
+  display: grid;
+  gap: 4px;
+  margin: -2px 0 4px 30px;
+}
+
+.nav-sub-item {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--subtle);
+  background: transparent;
+  text-align: left;
+}
+
+.nav-sub-item i {
+  width: 16px;
+  text-align: center;
+  font-size: 13px;
+}
+
+.nav-sub-item:hover,
+.nav-sub-item.active {
+  color: var(--green);
+  background: rgba(46,204,138,.1);
+}
+
+.sidebar.collapsed .nav-sub {
+  margin-left: 0;
+}
+
+.sidebar.collapsed .nav-sub-item {
+  justify-content: center;
+  padding: 0;
+}
+
+.sidebar.collapsed .nav-sub-item span {
+  display: none;
+}
+
 .sidebar-account {
   min-height: 56px;
   display: flex;
@@ -933,33 +976,6 @@ button { border: 0; cursor: pointer; }
 
 .health-summary-card strong {
   font-size: 28px;
-}
-
-.health-tabs {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.health-tab {
-  min-height: 42px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 0 10px;
-  border-radius: 8px;
-  color: var(--muted);
-  background: var(--panel);
-  border: 1px solid var(--line);
-}
-
-.health-tab.active,
-.health-tab:hover {
-  color: var(--green);
-  border-color: rgba(46,204,138,.35);
-  background: rgba(46,204,138,.1);
 }
 
 .health-panel { display: none; }
@@ -2608,11 +2624,14 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
   .sidebar.collapsed { width: var(--sidebar); flex-basis: var(--sidebar); }
   .sidebar-toggle { display: none; }
   .sidebar.collapsed .brand-copy, .sidebar.collapsed .nav-item span, .sidebar.collapsed .account-copy { opacity: 1; width: auto; }
+  .sidebar.collapsed .nav-sub { margin-left: 30px; }
+  .sidebar.collapsed .nav-sub-item { justify-content: flex-start; padding: 0 10px; }
+  .sidebar.collapsed .nav-sub-item span { display: inline; }
   .sidebar.collapsed .account-chevron { display: block; }
   .main { min-height: 100vh; }
   .menu-button { display: inline-flex !important; }
   .content { padding: 16px; }
-  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .health-tabs, .health-overview, .health-edit-grid, .health-edit-grid.three, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .home-overview, .home-board, .home-edit-grid, .home-edit-grid.three, .email-grid { grid-template-columns: 1fr; }
+  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .health-overview, .health-edit-grid, .health-edit-grid.three, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .home-overview, .home-board, .home-edit-grid, .home-edit-grid.three, .email-grid { grid-template-columns: 1fr; }
   .statement-grid,
   .transaction-edit-grid,
   .goal-edit-grid,
