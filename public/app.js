@@ -1519,6 +1519,7 @@ function setPage(page) {
   state.page = page;
   qsa('.view').forEach(view => view.classList.toggle('active', view.id === `view-${page}`));
   qsa('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.page === page));
+  qs('#healthSubnav')?.classList.toggle('show', page === 'health');
   qs('#pageTitle').textContent = pages[page].title;
   qs('#pageSubtitle').textContent = pages[page].subtitle;
   qs('#sidebar').classList.remove('mobile-open');
