@@ -845,6 +845,45 @@ button { border: 0; cursor: pointer; }
   text-decoration: line-through;
 }
 
+.pantry-essentials {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.pantry-essentials .list-header small {
+  color: var(--subtle);
+}
+
+.pantry-essential-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pantry-essential-item {
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255,255,255,.025);
+  color: var(--text);
+}
+
+.pantry-essential-item input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--green);
+}
+
+.pantry-essential-item input:checked + span {
+  color: var(--green);
+}
+
 .home-edit-hero,
 .home-edit-section {
   border: 1px solid var(--line);
@@ -2643,7 +2682,7 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
   .main { min-height: 100vh; }
   .menu-button { display: inline-flex !important; }
   .content { padding: 16px; }
-  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .health-overview, .health-edit-grid, .health-edit-grid.three, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .home-overview, .home-board, .home-edit-grid, .home-edit-grid.three, .email-grid { grid-template-columns: 1fr; }
+  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .health-overview, .health-edit-grid, .health-edit-grid.three, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .home-overview, .home-board, .home-edit-grid, .home-edit-grid.three, .pantry-essential-grid, .email-grid { grid-template-columns: 1fr; }
   .statement-grid,
   .transaction-edit-grid,
   .goal-edit-grid,

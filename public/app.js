@@ -37,6 +37,68 @@ const transactionCategories = {
   entrada: ['Salario', 'Freela', 'Renda extra', 'Reembolso', 'Presente', 'Outros'],
   saida: ['Alimentacao', 'Transporte', 'Saude', 'Educacao', 'Lazer', 'Casa', 'Pessoal', 'Outros']
 };
+const pantryEssentials = [
+  '01 arroz',
+  '02 feijao',
+  '01 acucar',
+  '01 cafe',
+  '02 oleo',
+  '01 alho grande',
+  'macarrao diversos',
+  'molho de tomate',
+  'extrato',
+  'milho verde',
+  'azeitona',
+  'catchup',
+  'mostarda',
+  'creme de leite',
+  'batata palha',
+  'sal',
+  'vinagre',
+  'temperos',
+  'condimentos',
+  '01 cx de leite',
+  'bolacha diversas',
+  'margarina',
+  'mussarela',
+  'mortadela',
+  'pao de forma',
+  'pao de sal',
+  'massa pra bolo',
+  'massa pra cuscuz',
+  'requeijao cremoso',
+  'iogurte',
+  'sucos',
+  'refrigerante',
+  'frutas',
+  'limao',
+  '1kg de cebola',
+  'verduras',
+  'frango',
+  'linguica',
+  'salsicha',
+  'pao pra cachorro quente',
+  'detergente',
+  'sabao em po',
+  'sabao liquido',
+  'amaciante',
+  'desinfetante',
+  'cheirinho',
+  "q'boa",
+  'saco pra lixo',
+  'veja',
+  'creme dental',
+  'sabonete',
+  'shampoo',
+  'condicionador',
+  'Prestobarba',
+  'desodorante',
+  'papel higienico',
+  'maionese',
+  'Bombril',
+  'esponja',
+  'Nescau'
+];
 const money = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',
@@ -1169,6 +1231,8 @@ function renderHome() {
 function renderHomePanel(type, title, items, emptyText) {
   const panel = qs(`#home-tab-${type}`);
   if (!panel) return;
+  const shopping = state.data.casa?.filter(item => item.tipo === 'compra' && item.status !== 'feito') || [];
+  const essentials = type === 'despensa' ? pantryEssentialsTemplate(shopping) : '';
   panel.innerHTML = `
     <article class="home-column home-panel-column">
       <div class="list-header">
@@ -1176,7 +1240,30 @@ function renderHomePanel(type, title, items, emptyText) {
         <button class="pill-button" data-modal="home" data-home-kind="${type}"><i class="fa-solid fa-plus"></i><span>Adicionar</span></button>
       </div>
       <div class="home-list">${items.map(homeItemTemplate).join('') || emptyTemplate(emptyText)}</div>
+      ${essentials}
     </article>
+  `;
+}
+
+function pantryEssentialsTemplate(shopping) {
+  return `
+    <section class="pantry-essentials">
+      <div class="list-header">
+        <span>Lista fixa da despensa</span>
+        <small>Marque para adicionar em Compras</small>
+      </div>
+      <div class="pantry-essential-grid">
+        ${pantryEssentials.map(item => {
+          const inShopping = shopping.some(entry => entry.nome.toLowerCase() === item.toLowerCase());
+          return `
+            <label class="pantry-essential-item">
+              <input type="checkbox" data-add-pantry-shopping="${escapeHtml(item)}" ${inShopping ? 'checked disabled' : ''}>
+              <span>${escapeHtml(item)}</span>
+            </label>
+          `;
+        }).join('')}
+      </div>
+    </section>
   `;
 }
 
@@ -2061,6 +2148,28 @@ async function toggleHomeChecklistItem(id, index, checked) {
   await loadDashboard();
 }
 
+async function addPantryItemToShopping(name) {
+  const itemName = String(name || '').trim();
+  if (!itemName) return;
+  const exists = (state.data.casa || []).some(item => item.tipo === 'compra' && item.status !== 'feito' && item.nome.toLowerCase() === itemName.toLowerCase());
+  if (exists) {
+    showToast('Ja esta em compras', itemName);
+    return;
+  }
+  await api('/api/casa', {
+    method: 'POST',
+    body: JSON.stringify({
+      tipo: 'compra',
+      nome: itemName,
+      status: 'pendente',
+      valor: 0,
+      observacao: 'Adicionado pela despensa'
+    })
+  });
+  showToast('Adicionado em compras', itemName);
+  await loadDashboard();
+}
+
 async function updateWorkStatus(id, status) {
   const item = state.data.trabalhos.find(work => work.id === id);
   if (!item || item.status === status) return;
@@ -2350,6 +2459,12 @@ function bindEvents() {
   });
 
   document.body.addEventListener('change', event => {
+    const pantryItem = event.target.closest('[data-add-pantry-shopping]');
+    if (pantryItem) {
+      addPantryItemToShopping(pantryItem.dataset.addPantryShopping);
+      return;
+    }
+
     const checklistItem = event.target.closest('[data-toggle-home-item]');
     if (!checklistItem) return;
     toggleHomeChecklistItem(checklistItem.dataset.toggleHomeItem, Number(checklistItem.dataset.itemIndex), checklistItem.checked);
