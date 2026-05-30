@@ -3,6 +3,7 @@ const state = {
   page: 'overview',
   financeTab: 'account',
   healthTab: 'alimentacao',
+  homeTab: 'despensa',
   transactionFilter: 'todos',
   transactionCategory: 'todas',
   transactionSearch: '',
@@ -1160,9 +1161,23 @@ function renderHome() {
       <small>${formatMoney(shoppingOpen.reduce((sum, item) => sum + Number(item.valor || 0), 0))} estimado</small>
     </article>
   `;
-  qs('#pantryList').innerHTML = pantry.map(homeItemTemplate).join('') || emptyTemplate('Nenhum item na despensa.');
-  qs('#houseBillsList').innerHTML = bills.map(homeItemTemplate).join('') || emptyTemplate('Nenhuma conta cadastrada.');
-  qs('#shoppingList').innerHTML = shopping.map(homeItemTemplate).join('') || emptyTemplate('Nenhuma compra na lista.');
+  renderHomePanel('despensa', 'Despensa', pantry, 'Nenhum item na despensa.');
+  renderHomePanel('conta', 'Contas', bills, 'Nenhuma conta cadastrada.');
+  renderHomePanel('compra', 'Compras', shopping, 'Nenhuma compra na lista.');
+}
+
+function renderHomePanel(type, title, items, emptyText) {
+  const panel = qs(`#home-tab-${type}`);
+  if (!panel) return;
+  panel.innerHTML = `
+    <article class="home-column home-panel-column">
+      <div class="list-header">
+        <span>${escapeHtml(title)}</span>
+        <button class="pill-button" data-modal="home" data-home-kind="${type}"><i class="fa-solid fa-plus"></i><span>Adicionar</span></button>
+      </div>
+      <div class="home-list">${items.map(homeItemTemplate).join('') || emptyTemplate(emptyText)}</div>
+    </article>
+  `;
 }
 
 function homeItemTemplate(item) {
@@ -1520,6 +1535,7 @@ function setPage(page) {
   qsa('.view').forEach(view => view.classList.toggle('active', view.id === `view-${page}`));
   qsa('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.page === page));
   qs('#healthSubnav')?.classList.toggle('show', page === 'health');
+  qs('#homeSubnav')?.classList.toggle('show', page === 'home');
   qs('#pageTitle').textContent = pages[page].title;
   qs('#pageSubtitle').textContent = pages[page].subtitle;
   qs('#sidebar').classList.remove('mobile-open');
@@ -1538,6 +1554,13 @@ function setHealthTab(tabName) {
   state.healthKind = tabName;
   qsa('.nav-sub-item[data-health-nav]').forEach(button => button.classList.toggle('active', button.dataset.healthNav === tabName));
   qsa('.health-panel').forEach(panel => panel.classList.toggle('active', panel.id === `health-tab-${tabName}`));
+}
+
+function setHomeTab(tabName) {
+  state.homeTab = tabName;
+  state.homeKind = tabName;
+  qsa('.nav-sub-item[data-home-nav]').forEach(button => button.classList.toggle('active', button.dataset.homeNav === tabName));
+  qsa('.home-panel').forEach(panel => panel.classList.toggle('active', panel.id === `home-tab-${tabName}`));
 }
 
 function openModal(type, editItem = null) {
@@ -2162,6 +2185,12 @@ function bindEvents() {
     button.addEventListener('click', () => {
       setPage('health');
       setHealthTab(button.dataset.healthNav);
+    });
+  });
+  qsa('[data-home-nav]').forEach(button => {
+    button.addEventListener('click', () => {
+      setPage('home');
+      setHomeTab(button.dataset.homeNav);
     });
   });
   qsa('.filter').forEach(button => {

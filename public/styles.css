@@ -771,9 +771,16 @@ button { border: 0; cursor: pointer; }
   gap: 14px;
 }
 
+.home-panel { display: none; }
+.home-panel.active { display: block; }
+
 .home-column {
   padding: 14px;
   min-height: 360px;
+}
+
+.home-panel-column {
+  min-height: 420px;
 }
 
 .home-list {
