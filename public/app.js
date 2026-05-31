@@ -37,68 +37,39 @@ const transactionCategories = {
   entrada: ['Salario', 'Freela', 'Renda extra', 'Reembolso', 'Presente', 'Outros'],
   saida: ['Alimentacao', 'Transporte', 'Saude', 'Educacao', 'Lazer', 'Casa', 'Pessoal', 'Outros']
 };
-const pantryEssentials = [
-  '01 arroz',
-  '02 feijao',
-  '01 acucar',
-  '01 cafe',
-  '02 oleo',
-  '01 alho grande',
-  'macarrao diversos',
-  'molho de tomate',
-  'extrato',
-  'milho verde',
-  'azeitona',
-  'catchup',
-  'mostarda',
-  'creme de leite',
-  'batata palha',
-  'sal',
-  'vinagre',
-  'temperos',
-  'condimentos',
-  '01 cx de leite',
-  'bolacha diversas',
-  'margarina',
-  'mussarela',
-  'mortadela',
-  'pao de forma',
-  'pao de sal',
-  'massa pra bolo',
-  'massa pra cuscuz',
-  'requeijao cremoso',
-  'iogurte',
-  'sucos',
-  'refrigerante',
-  'frutas',
-  'limao',
-  '1kg de cebola',
-  'verduras',
-  'frango',
-  'linguica',
-  'salsicha',
-  'pao pra cachorro quente',
-  'detergente',
-  'sabao em po',
-  'sabao liquido',
-  'amaciante',
-  'desinfetante',
-  'cheirinho',
-  "q'boa",
-  'saco pra lixo',
-  'veja',
-  'creme dental',
-  'sabonete',
-  'shampoo',
-  'condicionador',
-  'Prestobarba',
-  'desodorante',
-  'papel higienico',
-  'maionese',
-  'Bombril',
-  'esponja',
-  'Nescau'
+const pantryEssentialGroups = [
+  {
+    title: 'Base da cozinha',
+    icon: 'fa-bowl-rice',
+    items: ['01 arroz', '02 feijao', '01 acucar', '01 cafe', '02 oleo', '01 alho grande', 'macarrao diversos', 'sal', 'vinagre', 'temperos', 'condimentos', 'Nescau']
+  },
+  {
+    title: 'Molhos e enlatados',
+    icon: 'fa-jar',
+    items: ['molho de tomate', 'extrato', 'milho verde', 'azeitona', 'catchup', 'mostarda', 'creme de leite', 'batata palha', 'maionese']
+  },
+  {
+    title: 'Cafe e frios',
+    icon: 'fa-bread-slice',
+    items: ['01 cx de leite', 'bolacha diversas', 'margarina', 'mussarela', 'mortadela', 'pao de forma', 'pao de sal', 'massa pra bolo', 'massa pra cuscuz', 'requeijao cremoso', 'iogurte', 'sucos', 'refrigerante']
+  },
+  {
+    title: 'Hortifruti e mistura',
+    icon: 'fa-carrot',
+    items: ['frutas', 'limao', '1kg de cebola', 'verduras', 'frango', 'linguica', 'salsicha', 'pao pra cachorro quente']
+  },
+  {
+    title: 'Limpeza',
+    icon: 'fa-soap',
+    items: ['detergente', 'sabao em po', 'sabao liquido', 'amaciante', 'desinfetante', 'cheirinho', "q'boa", 'saco pra lixo', 'veja', 'Bombril', 'esponja']
+  },
+  {
+    title: 'Higiene',
+    icon: 'fa-pump-soap',
+    items: ['creme dental', 'sabonete', 'shampoo', 'condicionador', 'Prestobarba', 'desodorante', 'papel higienico']
+  }
 ];
+const pantryEssentials = pantryEssentialGroups.flatMap(group => group.items);
 const money = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',
@@ -353,6 +324,9 @@ async function logoutFromSettings() {
 function renderAccountUser() {
   const label = qs('#accountEmail');
   if (label) label.textContent = state.user?.email || state.user?.username || 'sem login';
+  const version = state.data?.version;
+  const versionLabel = qs('#settingsVersion');
+  if (versionLabel && version) versionLabel.textContent = `v${version.version} - commit ${version.commit}`;
   renderAccountAvatar();
 }
 
@@ -1319,22 +1293,37 @@ function billCardTemplate(item) {
 }
 
 function pantryEssentialsTemplate(shopping) {
+  const added = pantryEssentials.filter(item => shopping.some(entry => entry.nome.toLowerCase() === item.toLowerCase())).length;
   return `
     <section class="pantry-essentials">
-      <div class="list-header">
-        <span>Lista fixa da despensa</span>
-        <small>Marque para adicionar em Compras</small>
+      <div class="pantry-essentials-head">
+        <div>
+          <span>Lista fixa da despensa</span>
+          <strong>${added}/${pantryEssentials.length}</strong>
+          <small>marcados em Compras</small>
+        </div>
+        <p>Marque qualquer item para mandar direto para Casa > Compras.</p>
       </div>
-      <div class="pantry-essential-grid">
-        ${pantryEssentials.map(item => {
-          const inShopping = shopping.some(entry => entry.nome.toLowerCase() === item.toLowerCase());
-          return `
-            <label class="pantry-essential-item">
-              <input type="checkbox" data-add-pantry-shopping="${escapeHtml(item)}" ${inShopping ? 'checked disabled' : ''}>
-              <span>${escapeHtml(item)}</span>
-            </label>
-          `;
-        }).join('')}
+      <div class="pantry-essential-groups">
+        ${pantryEssentialGroups.map(group => `
+          <article class="pantry-essential-group">
+            <div class="pantry-group-title">
+              <i class="fa-solid ${group.icon}"></i>
+              <span>${escapeHtml(group.title)}</span>
+            </div>
+            <div class="pantry-essential-grid">
+              ${group.items.map(item => {
+                const inShopping = shopping.some(entry => entry.nome.toLowerCase() === item.toLowerCase());
+                return `
+                  <label class="pantry-essential-item">
+                    <input type="checkbox" data-add-pantry-shopping="${escapeHtml(item)}" ${inShopping ? 'checked disabled' : ''}>
+                    <span>${escapeHtml(item)}</span>
+                  </label>
+                `;
+              }).join('')}
+            </div>
+          </article>
+        `).join('')}
       </div>
     </section>
   `;

@@ -3,6 +3,8 @@ const fs = require('fs/promises');
 const path = require('path');
 const crypto = require('crypto');
 const querystring = require('querystring');
+const { execSync } = require('child_process');
+const packageInfo = require('./package.json');
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -13,6 +15,8 @@ const DB_FILE = path.join(DATA_DIR, 'db.json');
 const DATABASE_URL = process.env.DATABASE_URL || process.env.MYSQL_URL || '';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const APP_COMMIT = (process.env.RAILWAY_GIT_COMMIT_SHA || process.env.RENDER_GIT_COMMIT || getGitCommit()).slice(0, 7) || 'local';
+const APP_VERSION = { version: packageInfo.version || '1.0.0', commit: APP_COMMIT };
 
 const initialData = {
   transacoes: [
@@ -57,6 +61,14 @@ const initialData = {
 const sessions = new Map();
 let mysqlPool = null;
 let mysqlReady = false;
+
+function getGitCommit() {
+  try {
+    return execSync('git rev-parse --short HEAD', { cwd: ROOT, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+  } catch {
+    return '';
+  }
+}
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -796,7 +808,7 @@ async function handleApi(req, res, pathname) {
   }
 
   if (req.method === 'GET' && pathname === '/api/dashboard') {
-    return send(res, 200, { ...data, user: publicUser(currentUser || { email: userEmail }), resumo: buildResumo(data) });
+    return send(res, 200, { ...data, user: publicUser(currentUser || { email: userEmail }), resumo: buildResumo(data), version: APP_VERSION });
   }
 
   if (req.method === 'GET' && ['transacoes', 'metas', 'trabalhos', 'saude', 'casa'].includes(collection)) {
