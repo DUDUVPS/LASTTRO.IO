@@ -1209,7 +1209,7 @@ function renderHome() {
   `;
   renderHomePanel('despensa', 'Despensa', pantry, 'Nenhum item na despensa.');
   renderHomePanel('conta', 'Contas', bills, 'Nenhuma conta cadastrada.');
-  renderHomePanel('compra', 'Compras', shopping, 'Nenhuma compra na lista.');
+  renderHomePanel('compra', 'Compras', shoppingOpen, 'Nenhuma compra na lista.');
 }
 
 function renderHomePanel(type, title, items, emptyText) {
@@ -1222,6 +1222,10 @@ function renderHomePanel(type, title, items, emptyText) {
     panel.innerHTML = billPanelTemplate(items);
     return;
   }
+  if (type === 'compra') {
+    panel.innerHTML = shoppingPanelTemplate(items);
+    return;
+  }
   panel.innerHTML = `
     <article class="home-column home-panel-column">
       <div class="list-header">
@@ -1230,6 +1234,34 @@ function renderHomePanel(type, title, items, emptyText) {
       </div>
       <div class="home-list">${items.map(homeItemTemplate).join('') || emptyTemplate(emptyText)}</div>
       ${essentials}
+    </article>
+  `;
+}
+
+function shoppingPanelTemplate(items) {
+  return `
+    <article class="home-column home-panel-column shopping-panel">
+      <div class="list-header">
+        <span>Compras abertas</span>
+        <button class="pill-button" data-modal="home" data-home-kind="compra"><i class="fa-solid fa-plus"></i><span>Adicionar</span></button>
+      </div>
+      <div class="shopping-list">${items.map(shoppingCardTemplate).join('') || emptyTemplate('Nenhuma compra na lista.')}</div>
+    </article>
+  `;
+}
+
+function shoppingCardTemplate(item) {
+  const checklistTotal = Array.isArray(item.itensCompra) ? item.itensCompra.length : 0;
+  const checklistDone = Array.isArray(item.itensCompra) ? item.itensCompra.filter(entry => entry.feito).length : 0;
+  return `
+    <article class="shopping-card">
+      <div class="shopping-card-main">
+        <span>Pendente</span>
+        <strong>${escapeHtml(item.nome)}</strong>
+        <small>${formatMoney(item.valor)}${item.vencimento ? ` - ${escapeHtml(item.vencimento)}` : ''}</small>
+        ${checklistTotal ? `<small>${checklistDone}/${checklistTotal} itens marcados</small>` : ''}
+      </div>
+      <button class="primary-button" type="button" data-complete-shopping="${item.id}"><i class="fa-solid fa-cart-shopping"></i><span>Comprado</span></button>
     </article>
   `;
 }
@@ -1333,7 +1365,7 @@ function pantryEssentialsTemplate(shopping, pantry) {
                 return `
                   <article class="pantry-essential-item ${low ? 'low' : ''}">
                     <label>
-                      <input type="checkbox" data-add-pantry-shopping="${escapeHtml(item)}" ${inShopping ? 'checked disabled' : ''}>
+                      <input type="checkbox" data-add-pantry-shopping="${escapeHtml(item)}" ${inShopping ? 'checked' : ''}>
                       <span>${escapeHtml(item)}</span>
                     </label>
                     <div class="pantry-stock-row">
@@ -2294,6 +2326,20 @@ async function addPantryItemToShopping(name) {
   await loadDashboard();
 }
 
+async function togglePantryShopping(name, checked) {
+  const itemName = String(name || '').trim();
+  if (!itemName) return;
+  if (checked) {
+    await addPantryItemToShopping(itemName);
+    return;
+  }
+  const item = (state.data.casa || []).find(entry => entry.tipo === 'compra' && entry.status !== 'feito' && entry.nome.toLowerCase() === itemName.toLowerCase());
+  if (!item) return;
+  await api(`/api/casa/${item.id}`, { method: 'DELETE' });
+  showToast('Removido das compras', itemName);
+  await loadDashboard();
+}
+
 function pantryItemPayload(name, overrides = {}) {
   return {
     tipo: 'despensa',
@@ -2338,6 +2384,17 @@ async function payBill(id) {
     body: JSON.stringify({ ...item, status: 'feito' })
   });
   showToast('Boleto pago', item.nome);
+  await loadDashboard();
+}
+
+async function completeShoppingItem(id) {
+  const item = (state.data.casa || []).find(home => home.id === id);
+  if (!item) return;
+  await api(`/api/casa/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ ...item, status: 'feito' })
+  });
+  showToast('Compra concluida', item.nome);
   await loadDashboard();
 }
 
@@ -2622,6 +2679,12 @@ function bindEvents() {
       return;
     }
 
+    const completeShoppingButton = event.target.closest('[data-complete-shopping]');
+    if (completeShoppingButton) {
+      completeShoppingItem(completeShoppingButton.dataset.completeShopping);
+      return;
+    }
+
     const copyBillButton = event.target.closest('[data-copy-bill]');
     if (copyBillButton) {
       copyBillCode(copyBillButton.dataset.copyBill);
@@ -2665,7 +2728,7 @@ function bindEvents() {
   document.body.addEventListener('change', event => {
     const pantryItem = event.target.closest('[data-add-pantry-shopping]');
     if (pantryItem) {
-      addPantryItemToShopping(pantryItem.dataset.addPantryShopping);
+      togglePantryShopping(pantryItem.dataset.addPantryShopping, pantryItem.checked);
       return;
     }
 

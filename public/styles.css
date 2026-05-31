@@ -788,6 +788,43 @@ button { border: 0; cursor: pointer; }
   gap: 10px;
 }
 
+.shopping-list {
+  display: grid;
+  gap: 10px;
+}
+
+.shopping-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(46,204,138,.18);
+  border-radius: 8px;
+  background: rgba(46,204,138,.055);
+}
+
+.shopping-card-main {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.shopping-card-main span {
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.shopping-card-main strong {
+  font-size: 18px;
+}
+
+.shopping-card-main small {
+  color: var(--subtle);
+}
+
 .home-item-card {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -1068,8 +1105,8 @@ button { border: 0; cursor: pointer; }
 }
 
 .pantry-essential-item.low {
-  border-color: rgba(240,180,60,.32);
-  background: rgba(240,180,60,.07);
+  border-color: rgba(74,158,255,.32);
+  background: rgba(74,158,255,.07);
 }
 
 .pantry-essential-item label {
@@ -1121,7 +1158,7 @@ button { border: 0; cursor: pointer; }
 }
 
 .pantry-essential-item.low .pantry-stock-bar span {
-  background: linear-gradient(90deg, var(--yellow), var(--red));
+  background: linear-gradient(90deg, var(--blue), var(--green));
 }
 
 .pantry-actions {
@@ -2973,6 +3010,12 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
     grid-column: 2 / -1;
     justify-items: start;
     justify-content: flex-start;
+  }
+  .shopping-card {
+    grid-template-columns: 1fr;
+  }
+  .shopping-card .primary-button {
+    justify-self: start;
   }
   .bank-account-card { min-height: 0; padding: 16px; gap: 14px; }
   .bank-account-top { align-items: flex-start; }
