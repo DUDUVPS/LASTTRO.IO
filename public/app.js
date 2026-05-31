@@ -1878,13 +1878,13 @@ function openModal(type, editItem = null) {
           ${field('quantidade', 'Quantidade', 'number', item.quantidade ?? '1', false)}
           ${field('minimo', 'Minimo ideal', 'number', item.minimo ?? '1', false)}
           ${field('unidade', 'Unidade', 'text', item.unidade || 'un', false)}
-          ${field('valor', 'Valor', 'number', item.valor ?? '0', false)}
-          ${field('vencimento', 'Vencimento ou data', 'date', item.vencimento || '', false)}
         </div>
       </section>
       <section class="home-edit-section home-bill-fields">
         <div class="home-edit-title"><i class="fa-solid fa-barcode"></i><span>Boleto</span></div>
         <div class="home-edit-grid">
+          ${field('valor', 'Valor do boleto', 'number', item.valor ?? '0', true)}
+          ${field('vencimento', 'Vencimento', 'date', item.vencimento || '', true)}
           ${field('codigoBarras', 'Linha digitavel ou codigo de barras', 'text', item.codigoBarras || item.linhaDigitavel || '', false)}
           <label>Recorrencia
             <select name="recorrencia">
@@ -1901,6 +1901,10 @@ function openModal(type, editItem = null) {
           <i class="fa-solid fa-list-check"></i>
           <span>Lista de compras</span>
           <button class="pill-button" id="addShoppingItemButton" type="button"><i class="fa-solid fa-plus"></i><span>Item</span></button>
+        </div>
+        <div class="home-edit-grid">
+          ${field('valor', 'Valor estimado', 'number', item.valor ?? '0', false)}
+          ${field('vencimento', 'Data da compra', 'date', item.vencimento || '', false)}
         </div>
         <div id="shoppingItemsEditor" class="shopping-edit-list">${shoppingChecklistRows(item.itensCompra)}</div>
       </section>
@@ -2219,7 +2223,7 @@ function updateHomeEditorMode() {
   if (!type || !stock || !bill || !shopping) return;
   const isShopping = type === 'compra';
   const isBill = type === 'conta';
-  stock.classList.toggle('compact-home-section', isShopping || isBill);
+  stock.classList.toggle('hidden', isShopping || isBill);
   bill.classList.toggle('hidden', !isBill);
   shopping.classList.toggle('hidden', !isShopping);
 }
