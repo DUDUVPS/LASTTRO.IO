@@ -845,6 +845,146 @@ button { border: 0; cursor: pointer; }
   text-decoration: line-through;
 }
 
+.bills-panel {
+  background: linear-gradient(135deg, rgba(74,158,255,.08), rgba(255,255,255,.025));
+}
+
+.bill-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.bill-summary-grid article {
+  min-height: 90px;
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(0,0,0,.18);
+}
+
+.bill-summary-grid span,
+.bill-summary-grid small,
+.bill-card p,
+.bill-meta,
+.bill-value small {
+  color: var(--subtle);
+}
+
+.bill-summary-grid strong {
+  font-size: 24px;
+}
+
+.bill-list {
+  display: grid;
+  gap: 10px;
+}
+
+.bill-card {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255,255,255,.035);
+}
+
+.bill-card.overdue {
+  border-color: rgba(232,77,77,.35);
+  background: rgba(232,77,77,.07);
+}
+
+.bill-card.today,
+.bill-card.soon {
+  border-color: rgba(240,180,60,.32);
+  background: rgba(240,180,60,.07);
+}
+
+.bill-card.paid {
+  opacity: .72;
+}
+
+.bill-status-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--blue);
+  background: rgba(74,158,255,.12);
+}
+
+.bill-card.overdue .bill-status-icon { color: var(--red); background: rgba(232,77,77,.12); }
+.bill-card.today .bill-status-icon,
+.bill-card.soon .bill-status-icon { color: var(--yellow); background: rgba(240,180,60,.12); }
+.bill-card.paid .bill-status-icon { color: var(--green); background: rgba(46,204,138,.12); }
+
+.bill-main {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.bill-topline span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.bill-topline strong {
+  font-size: 18px;
+}
+
+.bill-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.bill-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bill-card code {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--text);
+  background: rgba(0,0,0,.28);
+  border: 1px solid var(--line);
+}
+
+.bill-value {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  min-width: 110px;
+}
+
+.bill-value strong {
+  font-family: Rajdhani, sans-serif;
+  font-size: 28px;
+}
+
+.bill-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .pantry-essentials {
   margin-top: 16px;
   padding-top: 14px;
@@ -2682,7 +2822,7 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
   .main { min-height: 100vh; }
   .menu-button { display: inline-flex !important; }
   .content { padding: 16px; }
-  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .health-overview, .health-edit-grid, .health-edit-grid.three, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .home-overview, .home-board, .home-edit-grid, .home-edit-grid.three, .pantry-essential-grid, .email-grid { grid-template-columns: 1fr; }
+  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .health-overview, .health-edit-grid, .health-edit-grid.three, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .home-overview, .home-board, .home-edit-grid, .home-edit-grid.three, .bill-summary-grid, .pantry-essential-grid, .email-grid { grid-template-columns: 1fr; }
   .statement-grid,
   .transaction-edit-grid,
   .goal-edit-grid,
@@ -2707,6 +2847,16 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
   .health-item-card .badge {
     grid-column: 2 / -1;
     justify-self: start;
+  }
+  .bill-card {
+    grid-template-columns: 44px 1fr;
+    align-items: start;
+  }
+  .bill-value,
+  .bill-actions {
+    grid-column: 2 / -1;
+    justify-items: start;
+    justify-content: flex-start;
   }
   .bank-account-card { min-height: 0; padding: 16px; gap: 14px; }
   .bank-account-top { align-items: flex-start; }

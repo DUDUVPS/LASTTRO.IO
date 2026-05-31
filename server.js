@@ -514,6 +514,8 @@ function normalizeHomeItem(item) {
     vencimento: item.vencimento || '',
     status: item.status === 'feito' ? 'feito' : 'pendente',
     observacao: String(item.observacao || '').trim(),
+    codigoBarras: String(item.codigoBarras || item.linhaDigitavel || '').trim(),
+    recorrencia: String(item.recorrencia || '').trim(),
     itensCompra: (Array.isArray(item.itensCompra) ? item.itensCompra : [])
       .map(entry => ({
         nome: String(entry.nome || '').trim(),

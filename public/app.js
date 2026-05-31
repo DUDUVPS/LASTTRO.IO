@@ -1233,6 +1233,10 @@ function renderHomePanel(type, title, items, emptyText) {
   if (!panel) return;
   const shopping = state.data.casa?.filter(item => item.tipo === 'compra' && item.status !== 'feito') || [];
   const essentials = type === 'despensa' ? pantryEssentialsTemplate(shopping) : '';
+  if (type === 'conta') {
+    panel.innerHTML = billPanelTemplate(items);
+    return;
+  }
   panel.innerHTML = `
     <article class="home-column home-panel-column">
       <div class="list-header">
@@ -1241,6 +1245,75 @@ function renderHomePanel(type, title, items, emptyText) {
       </div>
       <div class="home-list">${items.map(homeItemTemplate).join('') || emptyTemplate(emptyText)}</div>
       ${essentials}
+    </article>
+  `;
+}
+
+function billPanelTemplate(items) {
+  const sorted = [...items].sort((a, b) => String(a.vencimento || '9999-12-31').localeCompare(String(b.vencimento || '9999-12-31')));
+  const open = sorted.filter(item => item.status !== 'feito');
+  const paid = sorted.filter(item => item.status === 'feito');
+  const overdue = open.filter(item => billStatusInfo(item).state === 'overdue');
+  const dueSoon = open.filter(item => ['today', 'soon'].includes(billStatusInfo(item).state));
+  const openTotal = open.reduce((sum, item) => sum + Number(item.valor || 0), 0);
+  return `
+    <article class="home-column home-panel-column bills-panel">
+      <div class="list-header">
+        <span>Boletos e contas</span>
+        <button class="pill-button" data-modal="home" data-home-kind="conta"><i class="fa-solid fa-plus"></i><span>Boleto</span></button>
+      </div>
+      <section class="bill-summary-grid">
+        <article><span>Em aberto</span><strong>${formatMoney(openTotal)}</strong><small>${open.length} boletos</small></article>
+        <article><span>Vencidos</span><strong>${overdue.length}</strong><small>${formatMoney(overdue.reduce((sum, item) => sum + Number(item.valor || 0), 0))}</small></article>
+        <article><span>A vencer</span><strong>${dueSoon.length}</strong><small>proximos 5 dias</small></article>
+        <article><span>Pagos</span><strong>${paid.length}</strong><small>historico</small></article>
+      </section>
+      <div class="bill-list">${sorted.map(billCardTemplate).join('') || emptyTemplate('Nenhum boleto cadastrado.')}</div>
+    </article>
+  `;
+}
+
+function billStatusInfo(item) {
+  if (item.status === 'feito') return { state: 'paid', label: 'Pago', icon: 'fa-check' };
+  if (!item.vencimento) return { state: 'open', label: 'Sem vencimento', icon: 'fa-clock' };
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(`${item.vencimento}T00:00:00`);
+  const diff = Math.round((due - today) / 86400000);
+  if (diff < 0) return { state: 'overdue', label: `Venceu ha ${Math.abs(diff)}d`, icon: 'fa-triangle-exclamation' };
+  if (diff === 0) return { state: 'today', label: 'Vence hoje', icon: 'fa-bell' };
+  if (diff <= 5) return { state: 'soon', label: `Vence em ${diff}d`, icon: 'fa-calendar-day' };
+  return { state: 'open', label: `Vence em ${diff}d`, icon: 'fa-calendar' };
+}
+
+function billCardTemplate(item) {
+  const status = billStatusInfo(item);
+  const barcode = item.codigoBarras || item.linhaDigitavel || '';
+  return `
+    <article class="bill-card ${status.state}">
+      <div class="bill-status-icon"><i class="fa-solid ${status.icon}"></i></div>
+      <div class="bill-main">
+        <div class="bill-topline">
+          <span>${escapeHtml(status.label)}</span>
+          <strong>${escapeHtml(item.nome)}</strong>
+        </div>
+        <div class="bill-meta">
+          <span><i class="fa-regular fa-calendar"></i>${item.vencimento ? escapeHtml(item.vencimento) : 'Sem vencimento'}</span>
+          ${item.recorrencia ? `<span><i class="fa-solid fa-rotate"></i>${escapeHtml(item.recorrencia)}</span>` : ''}
+        </div>
+        ${barcode ? `<code>${escapeHtml(barcode)}</code>` : ''}
+        ${item.observacao ? `<p>${escapeHtml(item.observacao)}</p>` : ''}
+      </div>
+      <div class="bill-value">
+        <strong>${formatMoney(item.valor)}</strong>
+        <small>${item.status === 'feito' ? 'quitado' : 'a pagar'}</small>
+      </div>
+      <div class="bill-actions">
+        ${barcode ? `<button class="icon-button" data-copy-bill="${escapeHtml(barcode)}" aria-label="Copiar linha digitavel"><i class="fa-regular fa-copy"></i></button>` : ''}
+        <button class="icon-button" data-edit-home="${item.id}" aria-label="Editar boleto"><i class="fa-regular fa-pen-to-square"></i></button>
+        ${item.status !== 'feito' ? `<button class="pill-button" data-pay-bill="${item.id}"><i class="fa-solid fa-check"></i><span>Pagar</span></button>` : ''}
+        <button class="delete-button" data-delete="casa" data-id="${item.id}" aria-label="Excluir boleto"><i class="fa-regular fa-trash-can"></i></button>
+      </div>
     </article>
   `;
 }
@@ -1809,6 +1882,20 @@ function openModal(type, editItem = null) {
           ${field('vencimento', 'Vencimento ou data', 'date', item.vencimento || '', false)}
         </div>
       </section>
+      <section class="home-edit-section home-bill-fields">
+        <div class="home-edit-title"><i class="fa-solid fa-barcode"></i><span>Boleto</span></div>
+        <div class="home-edit-grid">
+          ${field('codigoBarras', 'Linha digitavel ou codigo de barras', 'text', item.codigoBarras || item.linhaDigitavel || '', false)}
+          <label>Recorrencia
+            <select name="recorrencia">
+              <option value="" ${!item.recorrencia ? 'selected' : ''}>Sem recorrencia</option>
+              <option value="Mensal" ${item.recorrencia === 'Mensal' ? 'selected' : ''}>Mensal</option>
+              <option value="Semanal" ${item.recorrencia === 'Semanal' ? 'selected' : ''}>Semanal</option>
+              <option value="Anual" ${item.recorrencia === 'Anual' ? 'selected' : ''}>Anual</option>
+            </select>
+          </label>
+        </div>
+      </section>
       <section class="home-edit-section home-shopping-fields">
         <div class="home-edit-title">
           <i class="fa-solid fa-list-check"></i>
@@ -2127,10 +2214,13 @@ function addShoppingChecklistRow() {
 function updateHomeEditorMode() {
   const type = qs('#homeTypeSelect')?.value;
   const stock = qs('.home-stock-fields');
+  const bill = qs('.home-bill-fields');
   const shopping = qs('.home-shopping-fields');
-  if (!type || !stock || !shopping) return;
+  if (!type || !stock || !bill || !shopping) return;
   const isShopping = type === 'compra';
-  stock.classList.toggle('compact-home-section', isShopping);
+  const isBill = type === 'conta';
+  stock.classList.toggle('compact-home-section', isShopping || isBill);
+  bill.classList.toggle('hidden', !isBill);
   shopping.classList.toggle('hidden', !isShopping);
 }
 
@@ -2168,6 +2258,26 @@ async function addPantryItemToShopping(name) {
   });
   showToast('Adicionado em compras', itemName);
   await loadDashboard();
+}
+
+async function payBill(id) {
+  const item = (state.data.casa || []).find(home => home.id === id);
+  if (!item) return;
+  await api(`/api/casa/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ ...item, status: 'feito' })
+  });
+  showToast('Boleto pago', item.nome);
+  await loadDashboard();
+}
+
+async function copyBillCode(code) {
+  try {
+    await navigator.clipboard.writeText(code);
+    showToast('Codigo copiado', 'Linha digitavel pronta para colar.');
+  } catch {
+    showToast('Nao copiou', 'Selecione a linha digitavel manualmente.');
+  }
 }
 
 async function updateWorkStatus(id, status) {
@@ -2421,6 +2531,18 @@ function bindEvents() {
     const editHomeButton = event.target.closest('[data-edit-home]');
     if (editHomeButton) {
       editHome(editHomeButton.dataset.editHome);
+      return;
+    }
+
+    const payBillButton = event.target.closest('[data-pay-bill]');
+    if (payBillButton) {
+      payBill(payBillButton.dataset.payBill);
+      return;
+    }
+
+    const copyBillButton = event.target.closest('[data-copy-bill]');
+    if (copyBillButton) {
+      copyBillCode(copyBillButton.dataset.copyBill);
       return;
     }
 
