@@ -1052,21 +1052,33 @@ button { border: 0; cursor: pointer; }
 
 .pantry-essential-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .pantry-essential-item {
-  min-height: 38px;
+  min-height: 118px;
   display: grid;
-  grid-template-columns: 18px 1fr;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 9px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255,255,255,.025);
   color: var(--text);
+}
+
+.pantry-essential-item.low {
+  border-color: rgba(240,180,60,.32);
+  background: rgba(240,180,60,.07);
+}
+
+.pantry-essential-item label {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 13px;
 }
 
 .pantry-essential-item input {
@@ -1077,6 +1089,55 @@ button { border: 0; cursor: pointer; }
 
 .pantry-essential-item input:checked + span {
   color: var(--green);
+}
+
+.pantry-stock-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pantry-stock-row small {
+  color: var(--subtle);
+}
+
+.pantry-stock-row strong {
+  color: var(--green);
+}
+
+.pantry-stock-bar {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+}
+
+.pantry-stock-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--green), var(--blue));
+}
+
+.pantry-essential-item.low .pantry-stock-bar span {
+  background: linear-gradient(90deg, var(--yellow), var(--red));
+}
+
+.pantry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pantry-actions .icon-button {
+  width: 32px;
+  height: 32px;
+}
+
+.pantry-actions .pill-button {
+  min-height: 32px;
+  padding: 0 10px;
 }
 
 .home-edit-hero,

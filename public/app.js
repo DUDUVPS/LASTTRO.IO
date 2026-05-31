@@ -590,6 +590,16 @@ function buildSmartSuggestions() {
       text: `${nextWork.nome} esta marcado para ${new Date(`${nextWork.inicio}T00:00:00`).toLocaleDateString('pt-BR')}.`
     });
   }
+  const lowPantry = (state.data.casa || [])
+    .filter(item => item.tipo === 'despensa')
+    .filter(item => Number(item.quantidade || 0) <= Number(item.minimo || 0));
+  if (lowPantry.length) {
+    suggestions.push({
+      icon: 'fa-boxes-stacked',
+      title: 'Despensa com estoque baixo',
+      text: `${lowPantry.slice(0, 3).map(item => item.nome).join(', ')}${lowPantry.length > 3 ? ` e mais ${lowPantry.length - 3}` : ''}.`
+    });
+  }
   if (!suggestions.length) {
     suggestions.push({ icon: 'fa-sparkles', title: 'Tudo organizado', text: 'Seu painel esta tranquilo hoje. Continue alimentando os dados.' });
   }
@@ -1206,7 +1216,8 @@ function renderHomePanel(type, title, items, emptyText) {
   const panel = qs(`#home-tab-${type}`);
   if (!panel) return;
   const shopping = state.data.casa?.filter(item => item.tipo === 'compra' && item.status !== 'feito') || [];
-  const essentials = type === 'despensa' ? pantryEssentialsTemplate(shopping) : '';
+  const pantry = state.data.casa?.filter(item => item.tipo === 'despensa') || [];
+  const essentials = type === 'despensa' ? pantryEssentialsTemplate(shopping, pantry) : '';
   if (type === 'conta') {
     panel.innerHTML = billPanelTemplate(items);
     return;
@@ -1292,7 +1303,7 @@ function billCardTemplate(item) {
   `;
 }
 
-function pantryEssentialsTemplate(shopping) {
+function pantryEssentialsTemplate(shopping, pantry) {
   const added = pantryEssentials.filter(item => shopping.some(entry => entry.nome.toLowerCase() === item.toLowerCase())).length;
   return `
     <section class="pantry-essentials">
@@ -1314,11 +1325,28 @@ function pantryEssentialsTemplate(shopping) {
             <div class="pantry-essential-grid">
               ${group.items.map(item => {
                 const inShopping = shopping.some(entry => entry.nome.toLowerCase() === item.toLowerCase());
+                const pantryItem = pantry.find(entry => entry.nome.toLowerCase() === item.toLowerCase());
+                const qty = Number(pantryItem?.quantidade || 0);
+                const min = Math.max(Number(pantryItem?.minimo || 1), 1);
+                const pct = Math.min(100, Math.round((qty / min) * 100));
+                const low = qty <= min;
                 return `
-                  <label class="pantry-essential-item">
-                    <input type="checkbox" data-add-pantry-shopping="${escapeHtml(item)}" ${inShopping ? 'checked disabled' : ''}>
-                    <span>${escapeHtml(item)}</span>
-                  </label>
+                  <article class="pantry-essential-item ${low ? 'low' : ''}">
+                    <label>
+                      <input type="checkbox" data-add-pantry-shopping="${escapeHtml(item)}" ${inShopping ? 'checked disabled' : ''}>
+                      <span>${escapeHtml(item)}</span>
+                    </label>
+                    <div class="pantry-stock-row">
+                      <small>${qty} de ${min} ${escapeHtml(pantryItem?.unidade || 'un')}</small>
+                      <strong>${pct}%</strong>
+                    </div>
+                    <div class="pantry-stock-bar"><span style="width:${pct}%"></span></div>
+                    <div class="pantry-actions">
+                      <button class="icon-button" type="button" data-pantry-adjust="${escapeHtml(item)}" data-delta="-1" aria-label="Diminuir quantidade"><i class="fa-solid fa-minus"></i></button>
+                      <button class="icon-button" type="button" data-pantry-adjust="${escapeHtml(item)}" data-delta="1" aria-label="Aumentar quantidade"><i class="fa-solid fa-plus"></i></button>
+                      <button class="pill-button" type="button" data-edit-pantry-essential="${escapeHtml(item)}"><i class="fa-regular fa-pen-to-square"></i><span>Ajustar</span></button>
+                    </div>
+                  </article>
                 `;
               }).join('')}
             </div>
@@ -2215,6 +2243,19 @@ function updateHomeEditorMode() {
   stock.classList.toggle('hidden', isShopping || isBill);
   bill.classList.toggle('hidden', !isBill);
   shopping.classList.toggle('hidden', !isShopping);
+  setSectionDisabled(stock, isShopping || isBill);
+  setSectionDisabled(bill, !isBill);
+  setSectionDisabled(shopping, !isShopping);
+}
+
+function setSectionDisabled(section, disabled) {
+  qsa('input, select, textarea, button', section).forEach(control => {
+    if (control.id === 'addShoppingItemButton') {
+      control.disabled = disabled;
+      return;
+    }
+    control.disabled = disabled;
+  });
 }
 
 async function toggleHomeChecklistItem(id, index, checked) {
@@ -2250,6 +2291,42 @@ async function addPantryItemToShopping(name) {
     })
   });
   showToast('Adicionado em compras', itemName);
+  await loadDashboard();
+}
+
+function pantryItemPayload(name, overrides = {}) {
+  return {
+    tipo: 'despensa',
+    nome: name,
+    status: 'pendente',
+    quantidade: 0,
+    minimo: 1,
+    unidade: 'un',
+    ...overrides
+  };
+}
+
+function editPantryEssential(name) {
+  const itemName = String(name || '').trim();
+  if (!itemName) return;
+  const existing = (state.data.casa || []).find(item => item.tipo === 'despensa' && item.nome.toLowerCase() === itemName.toLowerCase());
+  openModal('home', existing || pantryItemPayload(itemName));
+}
+
+async function adjustPantryEssential(name, delta) {
+  const itemName = String(name || '').trim();
+  if (!itemName) return;
+  const existing = (state.data.casa || []).find(item => item.tipo === 'despensa' && item.nome.toLowerCase() === itemName.toLowerCase());
+  const nextQuantity = Math.max(0, Number(existing?.quantidade || 0) + Number(delta || 0));
+  const payload = pantryItemPayload(itemName, {
+    ...(existing || {}),
+    quantidade: nextQuantity
+  });
+  const path = existing ? `/api/casa/${existing.id}` : '/api/casa';
+  await api(path, {
+    method: existing ? 'PUT' : 'POST',
+    body: JSON.stringify(payload)
+  });
   await loadDashboard();
 }
 
@@ -2500,6 +2577,18 @@ function bindEvents() {
 
     if (event.target.closest('#addShoppingItemButton')) {
       addShoppingChecklistRow();
+      return;
+    }
+
+    const pantryAdjustButton = event.target.closest('[data-pantry-adjust]');
+    if (pantryAdjustButton) {
+      adjustPantryEssential(pantryAdjustButton.dataset.pantryAdjust, pantryAdjustButton.dataset.delta);
+      return;
+    }
+
+    const pantryEditButton = event.target.closest('[data-edit-pantry-essential]');
+    if (pantryEditButton) {
+      editPantryEssential(pantryEditButton.dataset.editPantryEssential);
       return;
     }
 
