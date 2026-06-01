@@ -1052,16 +1052,17 @@ function renderGoals() {
 
 function renderWork() {
   const works = state.data.trabalhos.map(normalizeAcademicItem);
-  const exams = works.filter(work => academicKind(work) === 'prova');
-  const assignments = works.filter(work => academicKind(work) === 'trabalho');
-  const notes = works.filter(work => academicKind(work) === 'anotacao');
+  const academicTasks = works.filter(work => academicKind(work) !== 'estudo');
+  const exams = academicTasks.filter(work => academicKind(work) === 'prova');
+  const assignments = academicTasks.filter(work => academicKind(work) === 'trabalho');
+  const notes = academicTasks.filter(work => academicKind(work) === 'anotacao');
   const studies = works.filter(work => academicKind(work) === 'estudo');
-  const pending = works.filter(work => work.status === 'ativo');
-  const doing = works.filter(work => work.status === 'andamento');
-  const pendingItems = works.filter(work => work.status !== 'concluido');
-  const done = works.filter(work => work.status === 'concluido');
+  const pending = academicTasks.filter(work => work.status === 'ativo');
+  const doing = academicTasks.filter(work => work.status === 'andamento');
+  const pendingItems = academicTasks.filter(work => work.status !== 'concluido');
+  const done = academicTasks.filter(work => work.status === 'concluido');
   const studyHours = studies.reduce((sum, item) => sum + Number(item.horas || 0), 0);
-  const studySubjects = new Set(studies.map(item => item.disciplina).filter(Boolean));
+  const studySubjects = uniqueStudySubjects();
 
   qs('#workOverview').innerHTML = `
     <article class="work-summary-card primary">
@@ -1102,17 +1103,18 @@ function renderWork() {
     </article>
     <article class="study-summary-card">
       <span>Materias</span>
-      <strong>${studySubjects.size}</strong>
+      <strong>${studySubjects.length}</strong>
       <small>disciplinas diferentes</small>
     </article>
     <article class="study-summary-card">
-      <span>Concluidos</span>
-      <strong>${studies.filter(item => item.status === 'concluido').length}</strong>
-      <small>registros finalizados</small>
+      <span>Registros</span>
+      <strong>${studies.length}</strong>
+      <small>tempos salvos</small>
     </article>
   `;
+  qs('#studySubjects').innerHTML = studySubjectsTemplate(studySubjects, studies);
   qs('#studyList').innerHTML = studies.map(studyCardTemplate).join('') || emptyTemplate('Nenhum estudo registrado.');
-  renderAcademicCalendar(works);
+  renderAcademicCalendar(academicTasks);
 }
 
 function renderHealth() {
@@ -1522,6 +1524,42 @@ function normalizeAcademicItem(work) {
   };
 }
 
+function uniqueStudySubjects() {
+  const subjects = (state.data?.trabalhos || [])
+    .map(normalizeAcademicItem)
+    .filter(item => academicKind(item) === 'estudo')
+    .map(item => item.disciplina)
+    .filter(Boolean);
+  return [...new Set(subjects)].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+
+function studySubjectOptions(current = '') {
+  const subjects = uniqueStudySubjects();
+  const currentValue = String(current || '').trim();
+  if (currentValue && !subjects.includes(currentValue)) subjects.unshift(currentValue);
+  return subjects.map(subject => `<option value="${escapeHtml(subject)}" ${subject === currentValue ? 'selected' : ''}>${escapeHtml(subject)}</option>`).join('');
+}
+
+function studySubjectsTemplate(subjects, studies) {
+  if (!subjects.length) return '';
+  return `
+    <article class="study-subject-panel">
+      <div class="list-header">
+        <span>Materias salvas</span>
+        <small>${subjects.length} ${subjects.length === 1 ? 'materia' : 'materias'}</small>
+      </div>
+      <div class="study-subject-list">
+        ${subjects.map(subject => {
+          const total = studies
+            .filter(item => item.disciplina === subject)
+            .reduce((sum, item) => sum + Number(item.horas || 0), 0);
+          return `<span><strong>${escapeHtml(subject)}</strong><small>${formatDecimal(total)}h</small></span>`;
+        }).join('')}
+      </div>
+    </article>
+  `;
+}
+
 function transactionMiniTemplate(item) {
   const style = transactionStyle(item.tipo);
   return `
@@ -1774,8 +1812,8 @@ function studyCardTemplate(work) {
     <article class="study-card">
       <div class="work-card-head">
         <div class="work-card-title">
-          <strong>${escapeHtml(item.nome)}</strong>
-          <span>${escapeHtml(item.disciplina || 'Sem materia')} - ${escapeHtml(item.inicio || 'Sem data')}</span>
+          <strong>${escapeHtml(item.disciplina || 'Sem materia')}</strong>
+          <span>${escapeHtml(item.inicio || 'Sem data')}</span>
         </div>
         <div class="account-actions">
           <button class="delete-button" data-edit-work="${item.id}" aria-label="Editar estudo"><i class="fa-regular fa-pen-to-square"></i></button>
@@ -1784,7 +1822,6 @@ function studyCardTemplate(work) {
       </div>
       <div class="study-card-meta">
         <span><i class="fa-solid fa-clock"></i>${formatDecimal(item.horas || 0)}h</span>
-        <span><i class="fa-solid fa-chart-simple"></i>${formatDecimal(item.salario || 0)} nota/peso</span>
       </div>
       ${item.anotacao ? `<p class="work-note">${escapeHtml(item.anotacao)}</p>` : ''}
     </article>
@@ -1937,18 +1974,58 @@ function openModal(type, editItem = null) {
 
   if (type === 'work') {
     const item = editItem || { tipo: state.workKind || 'Trabalho' };
+    const isStudy = academicKind(item) === 'estudo';
     title.textContent = editItem ? 'Editar item da faculdade' : 'Novo item da faculdade';
-    fields.innerHTML = `
-      <div class="form-section-title">Faculdade</div>
-      ${field('nome', 'Titulo', 'text', item.nome || 'Ex: Prova de calculo', true)}
-      <label>Tipo<select name="tipo"><option value="Prova" ${item.tipo === 'Prova' ? 'selected' : ''}>Prova</option><option value="Trabalho" ${item.tipo === 'Trabalho' ? 'selected' : ''}>Trabalho</option><option value="Anotacao" ${item.tipo === 'Anotacao' ? 'selected' : ''}>Anotacao</option><option value="Estudo" ${item.tipo === 'Estudo' ? 'selected' : ''}>Estudo</option></select></label>
-      ${field('disciplina', 'Materia', 'text', item.disciplina || item.area || 'Ex: Matematica', false)}
-      <div class="form-section-title">Prazo e detalhes</div>
-      ${field('inicio', 'Data ou prazo', 'date', item.inicio || today, true)}
-      ${field('horas', 'Horas de estudo', 'number', item.horas ?? '0', false)}
-      ${field('salario', 'Nota ou peso', 'number', item.salario ?? '0', false)}
-      <label>Anotacoes<textarea name="anotacao" rows="4">${escapeHtml(item.anotacao || item.descricao || '')}</textarea></label>
-    `;
+    fields.className = isStudy ? 'form-grid study-editor-form' : 'form-grid';
+    if (isStudy) {
+      title.textContent = editItem ? 'Editar estudo' : 'Registrar estudo';
+      const currentSubject = item.disciplina || item.area || '';
+      fields.innerHTML = `
+        <div class="study-edit-hero">
+          <div>
+            <span>Registro de tempo</span>
+            <strong>${escapeHtml(currentSubject || 'Nova materia')}</strong>
+            <small>Use esta aba somente para registrar quanto tempo estudou.</small>
+          </div>
+          <i class="fa-solid fa-book-open-reader"></i>
+        </div>
+        <input type="hidden" name="tipo" value="Estudo">
+        <input type="hidden" name="status" value="concluido">
+        <section class="study-edit-section">
+          <div class="study-edit-title"><i class="fa-solid fa-layer-group"></i><span>Materia</span></div>
+          <div class="study-edit-grid">
+            <label>Materia
+              <select name="disciplinaPreset" id="studySubjectSelect">
+                ${studySubjectOptions(currentSubject)}
+                <option value="__nova__" ${currentSubject ? '' : 'selected'}>Nova materia</option>
+              </select>
+            </label>
+            ${field('disciplinaNova', 'Adicionar materia', 'text', currentSubject ? '' : 'Ex: Calculo', !currentSubject)}
+          </div>
+        </section>
+        <section class="study-edit-section">
+          <div class="study-edit-title"><i class="fa-solid fa-clock"></i><span>Tempo estudado</span></div>
+          <div class="study-edit-grid">
+            ${field('inicio', 'Data', 'date', item.inicio || today, true)}
+            ${field('horas', 'Tempo em horas', 'number', item.horas ?? '1', true)}
+          </div>
+          <label>Anotacoes<textarea name="anotacao" rows="4" placeholder="Ex: capitulos estudados, exercicios feitos, duvidas">${escapeHtml(item.anotacao || item.descricao || '')}</textarea></label>
+        </section>
+      `;
+      updateStudySubjectMode();
+    } else {
+      fields.innerHTML = `
+        <div class="form-section-title">Faculdade</div>
+        ${field('nome', 'Titulo', 'text', item.nome || 'Ex: Prova de calculo', true)}
+        <label>Tipo<select name="tipo"><option value="Prova" ${item.tipo === 'Prova' ? 'selected' : ''}>Prova</option><option value="Trabalho" ${item.tipo === 'Trabalho' ? 'selected' : ''}>Trabalho</option><option value="Anotacao" ${item.tipo === 'Anotacao' ? 'selected' : ''}>Anotacao</option></select></label>
+        ${field('disciplina', 'Materia', 'text', item.disciplina || item.area || 'Ex: Matematica', false)}
+        <div class="form-section-title">Prazo e detalhes</div>
+        ${field('inicio', 'Data ou prazo', 'date', item.inicio || today, true)}
+        ${field('horas', 'Horas de estudo', 'number', item.horas ?? '0', false)}
+        ${field('salario', 'Nota ou peso', 'number', item.salario ?? '0', false)}
+        <label>Anotacoes<textarea name="anotacao" rows="4">${escapeHtml(item.anotacao || item.descricao || '')}</textarea></label>
+      `;
+    }
   }
 
   if (type === 'home') {
@@ -2196,6 +2273,17 @@ async function submitModal(event) {
     delete data.catPreset;
     delete data.catCustom;
   }
+  if (state.modalType === 'work' && academicKind(data) === 'estudo') {
+    const subject = data.disciplinaPreset === '__nova__'
+      ? String(data.disciplinaNova || '').trim()
+      : String(data.disciplinaPreset || '').trim();
+    data.disciplina = subject || 'Sem materia';
+    data.nome = `Estudo - ${data.disciplina}`;
+    data.status = 'concluido';
+    data.salario = 0;
+    delete data.disciplinaPreset;
+    delete data.disciplinaNova;
+  }
   if (state.modalType === 'home') {
     data.itensCompra = qsa('.shopping-edit-row').map(row => ({
       nome: qs('[name="shoppingItem"]', row)?.value || '',
@@ -2303,6 +2391,16 @@ function updateAccountCreditMode() {
     input.disabled = !enabled;
   });
   section.classList.toggle('credit-disabled', !enabled);
+}
+
+function updateStudySubjectMode() {
+  const select = qs('#studySubjectSelect');
+  const customInput = qs('[name="disciplinaNova"]');
+  if (!select || !customInput) return;
+  const isNew = select.value === '__nova__';
+  customInput.closest('label')?.classList.toggle('hidden', !isNew);
+  customInput.required = isNew;
+  if (!isNew) customInput.value = '';
 }
 
 async function deleteEntity(collection, id) {
@@ -2678,6 +2776,7 @@ function bindEvents() {
     if (event.target.name === 'tipo') updateTransactionCategoryOptions();
     if (event.target.id === 'transactionCategorySelect') toggleCustomCategoryField();
     if (event.target.id === 'accountCreditToggle') updateAccountCreditMode();
+    if (event.target.id === 'studySubjectSelect') updateStudySubjectMode();
     if (event.target.id === 'goalTypeSelect') {
       qs('[name="unidade"]').value = '';
       updateGoalUnit();
