@@ -34,7 +34,7 @@ const pages = {
   email: { title: 'Email', subtitle: 'atalhos e mensagens pelo Gmail' }
 };
 
-const categoryColors = ['#ff7a45', '#00c4b4', '#8b6fff', '#f0b43c', '#4a9eff', '#2ecc8a'];
+const categoryColors = ['#ff7a45', '#d946ef', '#8b6fff', '#f0b43c', '#4a9eff', '#a855f7'];
 const transactionCategories = {
   entrada: ['Salario', 'Freela', 'Renda extra', 'Reembolso', 'Presente', 'Outros'],
   saida: ['Alimentacao', 'Transporte', 'Saude', 'Educacao', 'Lazer', 'Casa', 'Pessoal', 'Outros']
@@ -118,7 +118,7 @@ function escapeHtml(value) {
 }
 
 function transactionStyle(tipo) {
-  if (tipo === 'entrada') return { color: 'var(--green)', bg: 'rgba(46,204,138,.12)' };
+  if (tipo === 'entrada') return { color: 'var(--green)', bg: 'rgba(168,85,247,.12)' };
   return { color: 'var(--red)', bg: 'rgba(232,77,77,.12)' };
 }
 
@@ -1825,7 +1825,7 @@ function bankWithdrawalTemplate(item) {
   const isOpen = item.status === 'aberto';
   return `
     <article class="list-card">
-      <div class="card-icon" style="background:${isOpen ? 'rgba(240,180,60,.12)' : 'rgba(46,204,138,.12)'};color:${isOpen ? 'var(--yellow)' : 'var(--green)'}"><i class="fa-solid ${isOpen ? 'fa-arrow-up' : 'fa-check'}"></i></div>
+      <div class="card-icon" style="background:${isOpen ? 'rgba(240,180,60,.12)' : 'rgba(168,85,247,.12)'};color:${isOpen ? 'var(--yellow)' : 'var(--green)'}"><i class="fa-solid ${isOpen ? 'fa-arrow-up' : 'fa-check'}"></i></div>
       <div class="card-main">
         <strong>Retirada de ${formatMoney(item.valor)}</strong>
         <span>${escapeHtml(item.data)} · juros de ${formatMoney(item.juros)} · devolver ${formatMoney(item.totalDevolver)}</span>

@@ -9,7 +9,7 @@
   --text: #ece9df;
   --muted: #8e8b82;
   --subtle: #5f5c55;
-  --green: #2ecc8a;
+  --green: #a855f7;
   --red: #e84d4d;
   --yellow: #f0b43c;
   --blue: #4a9eff;
@@ -26,7 +26,7 @@ body {
   overflow: hidden;
   background:
     radial-gradient(circle at 20% 18%, rgba(74,158,255,.18), transparent 30%),
-    radial-gradient(circle at 78% 72%, rgba(46,204,138,.12), transparent 34%),
+    radial-gradient(circle at 78% 72%, rgba(168,85,247,.12), transparent 34%),
     var(--bg);
   color: var(--text);
   font-family: Inter, system-ui, sans-serif;
@@ -44,7 +44,7 @@ button { border: 0; cursor: pointer; }
   padding: 24px;
   background:
     radial-gradient(circle at 20% 18%, rgba(74,158,255,.18), transparent 30%),
-    radial-gradient(circle at 78% 72%, rgba(46,204,138,.12), transparent 34%),
+    radial-gradient(circle at 78% 72%, rgba(168,85,247,.12), transparent 34%),
     var(--bg);
   z-index: 20;
 }
@@ -107,7 +107,7 @@ button { border: 0; cursor: pointer; }
 }
 
 .auth-tab.active {
-  color: #09130f;
+  color: #fff;
   background: var(--green);
 }
 
@@ -154,7 +154,7 @@ button { border: 0; cursor: pointer; }
   height: 100vh;
   background:
     radial-gradient(circle at 20% 18%, rgba(74,158,255,.18), transparent 30%),
-    radial-gradient(circle at 78% 72%, rgba(46,204,138,.12), transparent 34%),
+    radial-gradient(circle at 78% 72%, rgba(168,85,247,.12), transparent 34%),
     var(--bg);
 }
 .app.locked { visibility: hidden; }
@@ -262,7 +262,7 @@ button { border: 0; cursor: pointer; }
 .nav-sub-item:hover,
 .nav-sub-item.active {
   color: var(--green);
-  background: rgba(46,204,138,.1);
+  background: rgba(168,85,247,.1);
 }
 
 .sidebar.collapsed .nav-sub {
@@ -444,7 +444,7 @@ button { border: 0; cursor: pointer; }
   border: 1px solid rgba(74,158,255,.22);
   border-radius: 8px;
   background:
-    linear-gradient(135deg, rgba(74,158,255,.14), rgba(46,204,138,.08)),
+    linear-gradient(135deg, rgba(74,158,255,.14), rgba(168,85,247,.08)),
     var(--panel);
 }
 
@@ -613,7 +613,7 @@ button { border: 0; cursor: pointer; }
   border-radius: 8px;
   padding: 0 14px;
 }
-.primary-button { color: #09130f; background: var(--green); font-weight: 700; }
+.primary-button { color: #fff; background: var(--green); font-weight: 700; }
 .pill-button { color: var(--blue); background: rgba(74,158,255,.1); border: 1px solid rgba(74,158,255,.25); }
 .ghost-button { color: var(--muted); background: var(--panel-2); border: 1px solid var(--line); }
 .icon-button { width: 38px; padding: 0; color: var(--muted); background: var(--panel-2); border: 1px solid var(--line); }
@@ -757,7 +757,7 @@ button { border: 0; cursor: pointer; }
 }
 
 .home-summary-card.primary {
-  background: linear-gradient(135deg, rgba(74,158,255,.16), rgba(46,204,138,.12));
+  background: linear-gradient(135deg, rgba(74,158,255,.16), rgba(168,85,247,.12));
 }
 
 .home-summary-card span,
@@ -806,9 +806,9 @@ button { border: 0; cursor: pointer; }
   align-items: center;
   gap: 12px;
   padding: 14px;
-  border: 1px solid rgba(46,204,138,.18);
+  border: 1px solid rgba(168,85,247,.18);
   border-radius: 8px;
-  background: rgba(46,204,138,.055);
+  background: rgba(168,85,247,.055);
 }
 
 .shopping-card-main {
@@ -966,7 +966,7 @@ button { border: 0; cursor: pointer; }
 .bill-card.overdue .bill-status-icon { color: var(--red); background: rgba(232,77,77,.12); }
 .bill-card.today .bill-status-icon,
 .bill-card.soon .bill-status-icon { color: var(--yellow); background: rgba(240,180,60,.12); }
-.bill-card.paid .bill-status-icon { color: var(--green); background: rgba(46,204,138,.12); }
+.bill-card.paid .bill-status-icon { color: var(--green); background: rgba(168,85,247,.12); }
 
 .bill-main {
   min-width: 0;
@@ -1033,9 +1033,9 @@ button { border: 0; cursor: pointer; }
   margin-top: 16px;
   padding: 16px;
   border-top: 1px solid var(--line);
-  border: 1px solid rgba(46,204,138,.16);
+  border: 1px solid rgba(168,85,247,.16);
   border-radius: 8px;
-  background: linear-gradient(135deg, rgba(46,204,138,.08), rgba(74,158,255,.05));
+  background: linear-gradient(135deg, rgba(168,85,247,.08), rgba(74,158,255,.05));
 }
 
 .pantry-essentials-head {
@@ -1196,7 +1196,7 @@ button { border: 0; cursor: pointer; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, rgba(74,158,255,.14), rgba(46,204,138,.1));
+  background: linear-gradient(135deg, rgba(74,158,255,.14), rgba(168,85,247,.1));
 }
 
 .home-edit-hero span,
@@ -1309,7 +1309,7 @@ button { border: 0; cursor: pointer; }
 }
 
 .health-summary-card.primary {
-  background: linear-gradient(135deg, rgba(46,204,138,.16), rgba(74,158,255,.12));
+  background: linear-gradient(135deg, rgba(168,85,247,.16), rgba(74,158,255,.12));
 }
 
 .health-summary-card.evolution {
@@ -1352,10 +1352,10 @@ button { border: 0; cursor: pointer; }
 .health-diet-total {
   margin-bottom: 12px;
   padding: 16px;
-  border: 1px solid rgba(46,204,138,.28);
+  border: 1px solid rgba(168,85,247,.28);
   border-radius: 8px;
   color: var(--green);
-  background: rgba(46,204,138,.1);
+  background: rgba(168,85,247,.1);
   font-size: 24px;
   font-weight: 900;
 }
@@ -1369,7 +1369,7 @@ button { border: 0; cursor: pointer; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, rgba(46,204,138,.14), rgba(74,158,255,.1));
+  background: linear-gradient(135deg, rgba(168,85,247,.14), rgba(74,158,255,.1));
 }
 
 .health-edit-hero strong {
@@ -1427,8 +1427,8 @@ button { border: 0; cursor: pointer; }
 .finance-balance-card {
   min-height: 184px;
   align-content: space-between;
-  background: linear-gradient(135deg, rgba(46,204,138,.13), rgba(74,158,255,.09));
-  border-color: rgba(46,204,138,.18);
+  background: linear-gradient(135deg, rgba(168,85,247,.13), rgba(74,158,255,.09));
+  border-color: rgba(168,85,247,.18);
 }
 
 .finance-total-card { min-height: 86px; }
@@ -1605,7 +1605,7 @@ button { border: 0; cursor: pointer; }
 }
 
 .account-card.is-account {
-  background: linear-gradient(135deg, rgba(46,204,138,.09), rgba(255,255,255,.02));
+  background: linear-gradient(135deg, rgba(168,85,247,.09), rgba(255,255,255,.02));
 }
 
 .account-card.is-card {
@@ -1739,8 +1739,8 @@ button { border: 0; cursor: pointer; }
   border: 1px solid rgba(74,158,255,.24);
   border-radius: 8px;
   background:
-    radial-gradient(circle at 100% 0%, rgba(46,204,138,.18), transparent 34%),
-    linear-gradient(135deg, rgba(74,158,255,.18), rgba(46,204,138,.1) 48%, rgba(255,255,255,.03));
+    radial-gradient(circle at 100% 0%, rgba(168,85,247,.18), transparent 34%),
+    linear-gradient(135deg, rgba(74,158,255,.18), rgba(168,85,247,.1) 48%, rgba(255,255,255,.03));
 }
 
 .bank-account-card.debit-only {
@@ -1981,8 +1981,8 @@ button { border: 0; cursor: pointer; }
 }
 
 .goal-summary-card.primary {
-  background: linear-gradient(135deg, rgba(46,204,138,.13), rgba(74,158,255,.08));
-  border-color: rgba(46,204,138,.2);
+  background: linear-gradient(135deg, rgba(168,85,247,.13), rgba(74,158,255,.08));
+  border-color: rgba(168,85,247,.2);
 }
 
 .goal-summary-card span {
@@ -2021,8 +2021,8 @@ button { border: 0; cursor: pointer; }
 }
 
 .work-summary-card.primary {
-  background: linear-gradient(135deg, rgba(46,204,138,.13), rgba(139,111,255,.08));
-  border-color: rgba(46,204,138,.2);
+  background: linear-gradient(135deg, rgba(168,85,247,.13), rgba(139,111,255,.08));
+  border-color: rgba(168,85,247,.2);
 }
 
 .work-summary-card span {
@@ -2069,7 +2069,7 @@ button { border: 0; cursor: pointer; }
 .kanban-column.drop-target {
   border-color: rgba(74,158,255,.55);
   background:
-    linear-gradient(180deg, rgba(74,158,255,.12), rgba(46,204,138,.05)),
+    linear-gradient(180deg, rgba(74,158,255,.12), rgba(168,85,247,.05)),
     var(--panel);
 }
 
@@ -2187,7 +2187,7 @@ button { border: 0; cursor: pointer; }
 }
 
 .study-summary-card.primary {
-  background: linear-gradient(135deg, rgba(74,158,255,.16), rgba(46,204,138,.1));
+  background: linear-gradient(135deg, rgba(74,158,255,.16), rgba(168,85,247,.1));
 }
 
 .study-summary-card span,
@@ -2227,7 +2227,7 @@ button { border: 0; cursor: pointer; }
   padding: 14px;
   border: 1px solid rgba(74,158,255,.18);
   border-radius: 8px;
-  background: linear-gradient(135deg, rgba(74,158,255,.08), rgba(46,204,138,.04));
+  background: linear-gradient(135deg, rgba(74,158,255,.08), rgba(168,85,247,.04));
 }
 
 .study-subject-list {
@@ -2317,7 +2317,7 @@ button { border: 0; cursor: pointer; }
 }
 
 .calendar-day.has-items {
-  border-color: rgba(46,204,138,.3);
+  border-color: rgba(168,85,247,.3);
 }
 
 .calendar-day strong {
@@ -2434,7 +2434,7 @@ button { border: 0; cursor: pointer; }
 
 .email-card.primary {
   border-color: rgba(74,158,255,.24);
-  background: linear-gradient(135deg, rgba(74,158,255,.12), rgba(46,204,138,.05)), var(--panel);
+  background: linear-gradient(135deg, rgba(74,158,255,.12), rgba(168,85,247,.05)), var(--panel);
 }
 
 .email-card span {
@@ -2525,7 +2525,7 @@ button { border: 0; cursor: pointer; }
   display: grid;
   gap: 4px;
   padding: 12px 14px;
-  border: 1px solid rgba(46,204,138,.28);
+  border: 1px solid rgba(168,85,247,.28);
   border-radius: 8px;
   background: rgba(23,23,21,.96);
   box-shadow: 0 18px 60px rgba(0,0,0,.35);
@@ -2542,7 +2542,7 @@ button { border: 0; cursor: pointer; }
   gap: 16px;
   padding: 18px 20px;
   margin-bottom: 14px;
-  background: linear-gradient(135deg, rgba(74,158,255,.13), rgba(46,204,138,.08));
+  background: linear-gradient(135deg, rgba(74,158,255,.13), rgba(168,85,247,.08));
   border: 1px solid rgba(74,158,255,.22);
   border-radius: 8px;
 }
@@ -2776,7 +2776,7 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
   border: 1px solid rgba(74,158,255,.22);
   border-radius: 10px;
   background:
-    linear-gradient(135deg, rgba(74,158,255,.14), rgba(46,204,138,.08)),
+    linear-gradient(135deg, rgba(74,158,255,.14), rgba(168,85,247,.08)),
     rgba(255,255,255,.03);
 }
 
@@ -2805,8 +2805,8 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
   flex: 0 0 auto;
   border-radius: 12px;
   color: var(--green);
-  background: rgba(46,204,138,.12);
-  border: 1px solid rgba(46,204,138,.22);
+  background: rgba(168,85,247,.12);
+  border: 1px solid rgba(168,85,247,.22);
   font-size: 20px;
 }
 
@@ -2820,7 +2820,7 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
 }
 
 .account-edit-section.debit {
-  border-color: rgba(46,204,138,.18);
+  border-color: rgba(168,85,247,.18);
 }
 
 .account-edit-section.credit {
@@ -2892,9 +2892,9 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
   justify-content: space-between;
   gap: 18px;
   padding: 18px;
-  border-color: rgba(46,204,138,.22);
+  border-color: rgba(168,85,247,.22);
   background:
-    linear-gradient(135deg, rgba(46,204,138,.14), rgba(74,158,255,.08)),
+    linear-gradient(135deg, rgba(168,85,247,.14), rgba(74,158,255,.08)),
     rgba(255,255,255,.03);
 }
 
@@ -2970,7 +2970,7 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
   border: 1px solid rgba(74,158,255,.22);
   border-radius: 10px;
   background:
-    linear-gradient(135deg, rgba(74,158,255,.12), rgba(46,204,138,.06)),
+    linear-gradient(135deg, rgba(74,158,255,.12), rgba(168,85,247,.06)),
     rgba(255,255,255,.03);
 }
 
@@ -3007,7 +3007,7 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
   place-items: center;
   border-radius: 12px;
   color: var(--green);
-  background: rgba(46,204,138,.12);
+  background: rgba(168,85,247,.12);
 }
 
 .goal-edit-section,
