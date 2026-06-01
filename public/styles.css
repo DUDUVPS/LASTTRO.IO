@@ -68,10 +68,10 @@ button { border: 0; cursor: pointer; }
   gap: 4px;
 }
 
-.login-brand strong {
-  font-family: Rajdhani, sans-serif;
-  font-size: 34px;
-  letter-spacing: 3px;
+.login-brand img {
+  width: min(260px, 86%);
+  max-height: 84px;
+  object-fit: contain;
 }
 
 .login-brand span {
