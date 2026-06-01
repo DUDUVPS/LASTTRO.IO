@@ -1598,13 +1598,18 @@ function workMiniTemplate(work) {
 function transactionCardTemplate(item) {
   const style = transactionStyle(item.tipo);
   const recurring = item.recorrente ? ' recorrente' : '';
+  const note = item.icon === 'fa-file-invoice-dollar' || item.cat === 'Boleto'
+    ? 'Boleto pago registrado no financeiro'
+    : item.tipo === 'saida'
+      ? 'Despesa lancada no fluxo mensal'
+      : 'Receita adicionada ao saldo';
   return `
     <article class="list-card">
       <div class="card-icon" style="background:${style.bg};color:${style.color}"><i class="fa-solid ${escapeHtml(item.icon)}"></i></div>
       <div class="card-main">
         <strong>${escapeHtml(item.nome)}</strong>
         <span>${escapeHtml(item.cat)} · ${escapeHtml(item.data)} · ${escapeHtml(item.tipo)}</span>
-        <span class="card-note">${item.tipo === 'saida' ? 'Despesa lancada no fluxo mensal' : 'Receita adicionada ao saldo'}${recurring}</span>
+        <span class="card-note">${note}${recurring}</span>
       </div>
       <div class="card-value" style="color:${style.color}">${item.val > 0 ? '+' : '-'}${formatMoney(Math.abs(item.val))}</div>
       <button class="delete-button" data-duplicate-transaction="${item.id}" aria-label="Duplicar transacao"><i class="fa-regular fa-copy"></i></button>
@@ -2567,8 +2572,8 @@ async function payBill(id) {
   await api('/api/transacoes', {
     method: 'POST',
     body: JSON.stringify({
-      nome: `Boleto: ${item.nome}`,
-      cat: 'Casa',
+      nome: 'Boleto pago',
+      cat: 'Boleto',
       tipo: 'saida',
       val: item.valor || 0,
       data: new Date().toISOString().slice(0, 10),
