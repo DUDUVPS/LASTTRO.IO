@@ -653,22 +653,27 @@ function showToast(title, text) {
 function renderMonthlyStatements() {
   const container = qs('#monthlyStatements');
   if (!container) return;
-  const groups = state.data.transacoes.filter(item => item.tipo !== 'investimento').reduce((acc, item) => {
-    const month = String(item.data || '').slice(0, 7) || 'sem-data';
-    if (!acc[month]) acc[month] = { mes: month, entradas: 0, saidas: 0, total: 0, count: 0 };
-    const value = Number(item.val || 0);
-    if (item.tipo === 'entrada') acc[month].entradas += value;
-    if (item.tipo === 'saida') acc[month].saidas += Math.abs(value);
-    acc[month].total += value;
-    acc[month].count += 1;
-    return acc;
-  }, {});
+  const groups = state.data.transacoes
+    .filter(item => item.tipo !== 'investimento')
+    .filter(item => /^\d{4}-\d{2}-\d{2}$/.test(String(item.data || '')))
+    .reduce((acc, item) => {
+      const month = String(item.data || '').slice(0, 7);
+      const period = statementPeriod(month);
+      if (!isTransactionInsideStatement(item, period)) return acc;
+      if (!acc[month]) acc[month] = { mes: month, entradas: 0, saidas: 0, total: 0, count: 0 };
+      const value = Number(item.val || 0);
+      if (item.tipo === 'entrada') acc[month].entradas += value;
+      if (item.tipo === 'saida') acc[month].saidas += Math.abs(value);
+      acc[month].total += value;
+      acc[month].count += 1;
+      return acc;
+    }, {});
   const statements = Object.values(groups).sort((a, b) => b.mes.localeCompare(a.mes)).slice(0, 6);
   container.innerHTML = statements.map(statementTemplate).join('') || emptyTemplate('Nenhuma movimentacao para gerar extrato.');
 }
 
 function statementTemplate(item) {
-  const label = item.mes === 'sem-data' ? 'Sem data' : new Date(`${item.mes}-02`).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const label = new Date(`${item.mes}-02`).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
   const period = statementPeriod(item.mes);
   return `
     <article class="statement-card">
@@ -692,6 +697,11 @@ function statementPeriod(month) {
   return { start: `${month}-01`, end, label: `01/${String(monthIndex).padStart(2, '0')} a ${String(endDate.getDate()).padStart(2, '0')}/${String(monthIndex).padStart(2, '0')}` };
 }
 
+function isTransactionInsideStatement(item, period) {
+  const date = String(item.data || '');
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= period.start && date <= period.end;
+}
+
 function downloadMonthlyStatement(month) {
   const period = statementPeriod(month);
   if (!period.start || !period.end) {
@@ -700,10 +710,7 @@ function downloadMonthlyStatement(month) {
   }
   const transactions = state.data.transacoes
     .filter(item => item.tipo !== 'investimento')
-    .filter(item => {
-      const date = String(item.data || '');
-      return date >= period.start && date <= period.end;
-    })
+    .filter(item => isTransactionInsideStatement(item, period))
     .sort((a, b) => new Date(a.data) - new Date(b.data));
   if (!transactions.length) {
     showToast('Extrato vazio', 'Nao ha movimentacoes nesse mes.');
@@ -711,23 +718,15 @@ function downloadMonthlyStatement(month) {
   }
   const entradas = transactions.filter(item => item.tipo === 'entrada').reduce((sum, item) => sum + Number(item.val || 0), 0);
   const saidas = transactions.filter(item => item.tipo === 'saida').reduce((sum, item) => sum + Math.abs(Number(item.val || 0)), 0);
-  const lines = [
-    { text: 'LASTTRO - Extrato mensal', size: 18 },
-    { text: `Periodo: ${period.start} ate ${period.end}`, size: 11 },
-    { text: `Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, size: 11 },
-    { text: '', size: 11 },
-    { text: `Entradas: ${formatMoney(entradas)}`, size: 12 },
-    { text: `Saidas: ${formatMoney(saidas)}`, size: 12 },
-    { text: `Resultado: ${formatMoney(entradas - saidas)}`, size: 12 },
-    { text: '', size: 11 },
-    { text: 'Movimentacoes', size: 14 },
-    { text: 'Data        Tipo       Categoria             Nome                         Valor', size: 10 },
-    ...transactions.map(item => ({
-      text: `${padText(item.data, 11)} ${padText(item.tipo, 10)} ${padText(item.cat || 'Sem categoria', 21)} ${padText(item.nome || 'Sem nome', 28)} ${formatMoney(item.val)}`,
-      size: 9
-    }))
-  ];
-  const blob = createStatementPdf(lines);
+  const blob = createStatementPdf({
+    month,
+    period,
+    generatedAt: new Date().toLocaleDateString('pt-BR'),
+    transactions,
+    entradas,
+    saidas,
+    resultado: entradas - saidas
+  });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -739,11 +738,6 @@ function downloadMonthlyStatement(month) {
   showToast('Extrato baixado', `Periodo ${period.start} ate ${period.end}.`);
 }
 
-function padText(value, size) {
-  const text = String(value ?? '').slice(0, size);
-  return text.padEnd(size, ' ');
-}
-
 function pdfText(value) {
   return String(value ?? '')
     .normalize('NFD')
@@ -752,10 +746,14 @@ function pdfText(value) {
     .replace(/[\\()]/g, '\\$&');
 }
 
-function createStatementPdf(lines) {
+function createStatementPdf(statement) {
+  const rowsPerPage = 24;
   const pageChunks = [];
-  for (let i = 0; i < lines.length; i += 42) pageChunks.push(lines.slice(i, i + 42));
-  const fontObject = 3 + pageChunks.length * 2;
+  for (let i = 0; i < statement.transactions.length; i += rowsPerPage) {
+    pageChunks.push(statement.transactions.slice(i, i + rowsPerPage));
+  }
+  const fontRegularObject = 3 + pageChunks.length * 2;
+  const fontBoldObject = fontRegularObject + 1;
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     `<< /Type /Pages /Kids [${pageChunks.map((_, index) => `${3 + index * 2} 0 R`).join(' ')}] /Count ${pageChunks.length} >>`
@@ -764,15 +762,13 @@ function createStatementPdf(lines) {
   pageChunks.forEach((pageLines, index) => {
     const pageObject = 3 + index * 2;
     const contentObject = pageObject + 1;
-    const content = pageLines.map((line, lineIndex) => {
-      const y = 790 - lineIndex * 17;
-      return `BT /F1 ${line.size || 10} Tf 42 ${y} Td (${pdfText(line.text)}) Tj ET`;
-    }).join('\n');
-    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${fontObject} 0 R >> >> /Contents ${contentObject} 0 R >>`);
+    const content = statementPdfPageContent(statement, pageLines, index, pageChunks.length);
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${fontRegularObject} 0 R /F2 ${fontBoldObject} 0 R >> >> /Contents ${contentObject} 0 R >>`);
     objects.push(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
   });
 
   objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+  objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
   let pdf = '%PDF-1.4\n';
   const offsets = [0];
   objects.forEach((object, index) => {
@@ -786,6 +782,81 @@ function createStatementPdf(lines) {
   });
   pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
   return new Blob([pdf], { type: 'application/pdf' });
+}
+
+function statementPdfPageContent(statement, transactions, pageIndex, totalPages) {
+  const commands = [];
+  const text = (value, x, y, size = 10, font = 'F1', color = '0.93 0.95 0.97') => {
+    commands.push(`${color} rg`);
+    commands.push(`BT /${font} ${size} Tf ${x} ${y} Td (${pdfText(value)}) Tj ET`);
+  };
+  const rect = (x, y, width, height, color) => commands.push(`${color} rg\n${x} ${y} ${width} ${height} re f`);
+  const stroke = (x, y, width, height, color = '0.18 0.24 0.30') => commands.push(`${color} RG\n${x} ${y} ${width} ${height} re S`);
+  const monthLabel = new Date(`${statement.month}-02`).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+  rect(0, 0, 595, 842, '0.04 0.05 0.06');
+  rect(0, 760, 595, 82, '0.03 0.12 0.20');
+  rect(42, 728, 511, 54, '0.07 0.09 0.10');
+  stroke(42, 728, 511, 54, '0.10 0.31 0.50');
+  text('LASTTRO', 58, 786, 22, 'F2', '0.93 0.95 0.97');
+  text('Extrato financeiro mensal', 58, 766, 11, 'F1', '0.53 0.80 1.00');
+  text(monthLabel, 380, 786, 16, 'F2', '0.93 0.95 0.97');
+  text(`${statement.period.label}  |  gerado em ${statement.generatedAt}`, 380, 767, 9, 'F1', '0.66 0.71 0.75');
+
+  if (pageIndex === 0) {
+    statementSummaryCard(commands, 'Entradas', formatMoney(statement.entradas), 42, 666, '0.18 0.80 0.54');
+    statementSummaryCard(commands, 'Saidas', formatMoney(statement.saidas), 214, 666, '0.91 0.30 0.30');
+    statementSummaryCard(commands, 'Resultado', formatMoney(statement.resultado), 386, 666, statement.resultado >= 0 ? '0.18 0.80 0.54' : '0.91 0.30 0.30');
+    text('Movimentacoes do periodo', 42, 622, 14, 'F2', '0.93 0.95 0.97');
+    text('Somente lancamentos entre o dia 1 e o ultimo dia do mes.', 42, 606, 9, 'F1', '0.66 0.71 0.75');
+  } else {
+    text('Movimentacoes do periodo', 42, 704, 14, 'F2', '0.93 0.95 0.97');
+  }
+
+  const tableTop = pageIndex === 0 ? 580 : 680;
+  rect(42, tableTop, 511, 24, '0.10 0.13 0.16');
+  text('Data', 52, tableTop + 8, 9, 'F2', '0.53 0.80 1.00');
+  text('Tipo', 116, tableTop + 8, 9, 'F2', '0.53 0.80 1.00');
+  text('Categoria', 178, tableTop + 8, 9, 'F2', '0.53 0.80 1.00');
+  text('Lancamento', 280, tableTop + 8, 9, 'F2', '0.53 0.80 1.00');
+  text('Valor', 492, tableTop + 8, 9, 'F2', '0.53 0.80 1.00');
+
+  transactions.forEach((item, rowIndex) => {
+    const y = tableTop - 22 - rowIndex * 20;
+    if (rowIndex % 2 === 0) rect(42, y - 5, 511, 20, '0.06 0.07 0.08');
+    const value = Number(item.val || 0);
+    const valueColor = value >= 0 ? '0.18 0.80 0.54' : '0.91 0.30 0.30';
+    text(formatPdfDate(item.data), 52, y, 8, 'F1', '0.85 0.88 0.90');
+    text(item.tipo || '-', 116, y, 8, 'F1', '0.85 0.88 0.90');
+    text(truncateText(item.cat || 'Sem categoria', 18), 178, y, 8, 'F1', '0.85 0.88 0.90');
+    text(truncateText(item.nome || 'Sem nome', 34), 280, y, 8, 'F1', '0.85 0.88 0.90');
+    text(formatMoney(value), 492, y, 8, 'F2', valueColor);
+  });
+
+  text(`Pagina ${pageIndex + 1}/${totalPages}`, 492, 36, 8, 'F1', '0.66 0.71 0.75');
+  text('LASTTRO - Todos os direitos reservados', 42, 36, 8, 'F1', '0.66 0.71 0.75');
+  return commands.join('\n');
+}
+
+function statementSummaryCard(commands, label, value, x, y, color) {
+  commands.push('0.07 0.09 0.10 rg');
+  commands.push(`${x} ${y} 152 72 re f`);
+  commands.push('0.18 0.24 0.30 RG');
+  commands.push(`${x} ${y} 152 72 re S`);
+  commands.push('0.66 0.71 0.75 rg');
+  commands.push(`BT /F1 9 Tf ${x + 14} ${y + 48} Td (${pdfText(label)}) Tj ET`);
+  commands.push(`${color} rg`);
+  commands.push(`BT /F2 17 Tf ${x + 14} ${y + 22} Td (${pdfText(value)}) Tj ET`);
+}
+
+function formatPdfDate(date) {
+  const [year, month, day] = String(date || '').split('-');
+  return year && month && day ? `${day}/${month}/${year}` : String(date || '');
+}
+
+function truncateText(value, size) {
+  const text = String(value || '');
+  return text.length > size ? `${text.slice(0, size - 3)}...` : text;
 }
 
 function updateTransactionCategoryOptions() {
