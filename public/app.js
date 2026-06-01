@@ -2,6 +2,7 @@ const state = {
   data: null,
   page: 'overview',
   financeTab: 'account',
+  workTab: 'tarefas',
   healthTab: 'alimentacao',
   homeTab: 'despensa',
   transactionFilter: 'todos',
@@ -13,6 +14,7 @@ const state = {
   investmentChart: null,
   modalType: null,
   editing: null,
+  workKind: 'Trabalho',
   homeKind: 'despensa',
   healthKind: 'alimentacao',
   gmailStatus: null,
@@ -87,6 +89,10 @@ function qsa(selector, root = document) {
 
 function formatMoney(value) {
   return money.format(Number(value || 0));
+}
+
+function formatDecimal(value) {
+  return Number(value || 0).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
 }
 
 function parseDecimal(value) {
@@ -1049,10 +1055,13 @@ function renderWork() {
   const exams = works.filter(work => academicKind(work) === 'prova');
   const assignments = works.filter(work => academicKind(work) === 'trabalho');
   const notes = works.filter(work => academicKind(work) === 'anotacao');
+  const studies = works.filter(work => academicKind(work) === 'estudo');
   const pending = works.filter(work => work.status === 'ativo');
   const doing = works.filter(work => work.status === 'andamento');
   const pendingItems = works.filter(work => work.status !== 'concluido');
   const done = works.filter(work => work.status === 'concluido');
+  const studyHours = studies.reduce((sum, item) => sum + Number(item.horas || 0), 0);
+  const studySubjects = new Set(studies.map(item => item.disciplina).filter(Boolean));
 
   qs('#workOverview').innerHTML = `
     <article class="work-summary-card primary">
@@ -1075,11 +1084,34 @@ function renderWork() {
       <strong>${done.length}</strong>
       <small>${pendingItems.length} itens pendentes</small>
     </article>
+    <article class="work-summary-card">
+      <span>Estudos</span>
+      <strong>${studies.length}</strong>
+      <small>${formatDecimal(studyHours)}h registradas</small>
+    </article>
   `;
 
   qs('#activeWorkList').innerHTML = pending.map(workCardTemplate).join('') || emptyTemplate('Nada pendente.');
   qs('#pendingWorkList').innerHTML = doing.map(workCardTemplate).join('') || emptyTemplate('Nada em andamento.');
   qs('#doneWorkList').innerHTML = done.map(workCardTemplate).join('') || emptyTemplate('Nada concluido.');
+  qs('#studyOverview').innerHTML = `
+    <article class="study-summary-card primary">
+      <span>Horas registradas</span>
+      <strong>${formatDecimal(studyHours)}h</strong>
+      <small>total de estudos</small>
+    </article>
+    <article class="study-summary-card">
+      <span>Materias</span>
+      <strong>${studySubjects.size}</strong>
+      <small>disciplinas diferentes</small>
+    </article>
+    <article class="study-summary-card">
+      <span>Concluidos</span>
+      <strong>${studies.filter(item => item.status === 'concluido').length}</strong>
+      <small>registros finalizados</small>
+    </article>
+  `;
+  qs('#studyList').innerHTML = studies.map(studyCardTemplate).join('') || emptyTemplate('Nenhum estudo registrado.');
   renderAcademicCalendar(works);
 }
 
@@ -1477,6 +1509,7 @@ function academicKind(work) {
   const value = String(work.tipo || '').toLowerCase();
   if (value.includes('prova')) return 'prova';
   if (value.includes('anot')) return 'anotacao';
+  if (value.includes('estudo')) return 'estudo';
   return 'trabalho';
 }
 
@@ -1735,6 +1768,29 @@ function workCardTemplate(work) {
   `;
 }
 
+function studyCardTemplate(work) {
+  const item = normalizeAcademicItem(work);
+  return `
+    <article class="study-card">
+      <div class="work-card-head">
+        <div class="work-card-title">
+          <strong>${escapeHtml(item.nome)}</strong>
+          <span>${escapeHtml(item.disciplina || 'Sem materia')} - ${escapeHtml(item.inicio || 'Sem data')}</span>
+        </div>
+        <div class="account-actions">
+          <button class="delete-button" data-edit-work="${item.id}" aria-label="Editar estudo"><i class="fa-regular fa-pen-to-square"></i></button>
+          <button class="delete-button" data-delete="trabalhos" data-id="${item.id}" aria-label="Excluir estudo"><i class="fa-regular fa-trash-can"></i></button>
+        </div>
+      </div>
+      <div class="study-card-meta">
+        <span><i class="fa-solid fa-clock"></i>${formatDecimal(item.horas || 0)}h</span>
+        <span><i class="fa-solid fa-chart-simple"></i>${formatDecimal(item.salario || 0)} nota/peso</span>
+      </div>
+      ${item.anotacao ? `<p class="work-note">${escapeHtml(item.anotacao)}</p>` : ''}
+    </article>
+  `;
+}
+
 function emptyTemplate(text) {
   return `<div class="empty">${escapeHtml(text)}</div>`;
 }
@@ -1743,6 +1799,7 @@ function setPage(page) {
   state.page = page;
   qsa('.view').forEach(view => view.classList.toggle('active', view.id === `view-${page}`));
   qsa('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.page === page));
+  qs('#workSubnav')?.classList.toggle('show', page === 'work');
   qs('#healthSubnav')?.classList.toggle('show', page === 'health');
   qs('#homeSubnav')?.classList.toggle('show', page === 'home');
   qs('#pageTitle').textContent = pages[page].title;
@@ -1756,6 +1813,12 @@ function setFinanceTab(tabName) {
   qsa('.finance-tab').forEach(button => button.classList.toggle('active', button.dataset.financeTab === tabName));
   qsa('.finance-panel').forEach(panel => panel.classList.toggle('active', panel.id === `finance-tab-${tabName}`));
   renderFinancePrimaryAction();
+}
+
+function setWorkTab(tabName) {
+  state.workTab = tabName;
+  qsa('.nav-sub-item[data-work-nav]').forEach(button => button.classList.toggle('active', button.dataset.workNav === tabName));
+  qsa('.work-panel').forEach(panel => panel.classList.toggle('active', panel.id === `work-tab-${tabName}`));
 }
 
 function setHealthTab(tabName) {
@@ -1873,12 +1936,12 @@ function openModal(type, editItem = null) {
   }
 
   if (type === 'work') {
-    const item = editItem || {};
+    const item = editItem || { tipo: state.workKind || 'Trabalho' };
     title.textContent = editItem ? 'Editar item da faculdade' : 'Novo item da faculdade';
     fields.innerHTML = `
       <div class="form-section-title">Faculdade</div>
       ${field('nome', 'Titulo', 'text', item.nome || 'Ex: Prova de calculo', true)}
-      <label>Tipo<select name="tipo"><option value="Prova" ${item.tipo === 'Prova' ? 'selected' : ''}>Prova</option><option value="Trabalho" ${item.tipo === 'Trabalho' ? 'selected' : ''}>Trabalho</option><option value="Anotacao" ${item.tipo === 'Anotacao' ? 'selected' : ''}>Anotacao</option></select></label>
+      <label>Tipo<select name="tipo"><option value="Prova" ${item.tipo === 'Prova' ? 'selected' : ''}>Prova</option><option value="Trabalho" ${item.tipo === 'Trabalho' ? 'selected' : ''}>Trabalho</option><option value="Anotacao" ${item.tipo === 'Anotacao' ? 'selected' : ''}>Anotacao</option><option value="Estudo" ${item.tipo === 'Estudo' ? 'selected' : ''}>Estudo</option></select></label>
       ${field('disciplina', 'Materia', 'text', item.disciplina || item.area || 'Ex: Matematica', false)}
       <div class="form-section-title">Prazo e detalhes</div>
       ${field('inicio', 'Data ou prazo', 'date', item.inicio || today, true)}
@@ -2027,6 +2090,7 @@ function openModal(type, editItem = null) {
     const bankName = account?.nome || card?.nome?.replace(/\s*credito$/i, '') || '';
     const bankLabel = account?.bandeira || card?.bandeira || bankName;
     const groupId = account?.groupId || card?.groupId || editItem?.groupId || newGroupId();
+    const creditEnabled = Boolean(card);
     state.editing = { type, accountId: account?.id || null, cardId: card?.id || null, groupId };
     title.textContent = editItem ? 'Editar banco' : 'Novo banco';
     fields.className = 'form-grid account-editor-form';
@@ -2054,6 +2118,10 @@ function openModal(type, editItem = null) {
 
       <section class="account-edit-section credit">
         <div class="account-edit-title"><i class="fa-solid fa-credit-card"></i><span>Credito</span></div>
+        <label class="toggle-line account-credit-toggle">
+          <input id="accountCreditToggle" name="creditoAtivo" type="checkbox" value="true" ${creditEnabled ? 'checked' : ''}>
+          <span>Ativar cartao de credito nesse banco</span>
+        </label>
         <div class="account-edit-grid three">
           ${field('limite', 'Limite total', 'number', card?.limite ?? '0', false)}
           ${field('usado', 'Fatura atual', 'number', card?.usado ?? '0', false)}
@@ -2061,6 +2129,7 @@ function openModal(type, editItem = null) {
         </div>
       </section>
     `;
+    updateAccountCreditMode();
   }
 
   if (type === 'investment') {
@@ -2176,6 +2245,7 @@ async function submitBankAccount(data) {
   const nome = String(data.nome || 'Novo banco').trim();
   const bandeira = String(data.bandeira || nome).trim();
   const groupId = editing.groupId || newGroupId();
+  const creditEnabled = data.creditoAtivo === 'true';
   const accountPayload = {
     groupId,
     nome,
@@ -2203,8 +2273,10 @@ async function submitBankAccount(data) {
     body: JSON.stringify(accountPayload)
   });
 
-  const hasCredit = Number(cardPayload.limite || 0) > 0 || Number(cardPayload.usado || 0) > 0 || editing.cardId;
-  if (!hasCredit) return;
+  if (!creditEnabled) {
+    if (editing.cardId) await api(`/api/contas-cartoes/${editing.cardId}`, { method: 'DELETE' });
+    return;
+  }
 
   const cardPath = editing.cardId ? `/api/contas-cartoes/${editing.cardId}` : '/api/contas-cartoes';
   await api(cardPath, {
@@ -2220,6 +2292,17 @@ function normalizeFormNumbers(data) {
   ['rendimento', 'quantidade', 'minimo', 'calorias', 'duracao'].forEach(key => {
     if (key in data) data[key] = parseDecimal(data[key]);
   });
+}
+
+function updateAccountCreditMode() {
+  const toggle = qs('#accountCreditToggle');
+  const section = toggle?.closest('.account-edit-section');
+  if (!toggle || !section) return;
+  const enabled = toggle.checked;
+  qsa('input[name="limite"], input[name="usado"], input[name="vencimento"]', section).forEach(input => {
+    input.disabled = !enabled;
+  });
+  section.classList.toggle('credit-disabled', !enabled);
 }
 
 async function deleteEntity(collection, id) {
@@ -2379,11 +2462,27 @@ async function adjustPantryEssential(name, delta) {
 async function payBill(id) {
   const item = (state.data.casa || []).find(home => home.id === id);
   if (!item) return;
+  if (item.status === 'feito') {
+    showToast('Boleto ja pago', item.nome);
+    return;
+  }
+  await api('/api/transacoes', {
+    method: 'POST',
+    body: JSON.stringify({
+      nome: `Boleto: ${item.nome}`,
+      cat: 'Casa',
+      tipo: 'saida',
+      val: item.valor || 0,
+      data: new Date().toISOString().slice(0, 10),
+      recorrente: false,
+      icon: 'fa-file-invoice-dollar'
+    })
+  });
   await api(`/api/casa/${id}`, {
     method: 'PUT',
     body: JSON.stringify({ ...item, status: 'feito' })
   });
-  showToast('Boleto pago', item.nome);
+  showToast('Boleto pago', 'Saida registrada em movimentacoes.');
   await loadDashboard();
 }
 
@@ -2520,12 +2619,19 @@ function bindEvents() {
   qsa('[data-go]').forEach(item => item.addEventListener('click', () => setPage(item.dataset.go)));
   qsa('[data-modal]').forEach(button => button.addEventListener('click', event => {
     event.stopPropagation();
+    if (button.dataset.modal === 'work') state.workKind = button.dataset.workKind || (state.workTab === 'estudos' ? 'Estudo' : 'Trabalho');
     if (button.dataset.homeKind) state.homeKind = button.dataset.homeKind;
     if (button.dataset.healthKind) state.healthKind = button.dataset.healthKind;
     openModal(button.dataset.modal);
   }));
   qsa('.finance-tab').forEach(button => {
     button.addEventListener('click', () => setFinanceTab(button.dataset.financeTab));
+  });
+  qsa('[data-work-nav]').forEach(button => {
+    button.addEventListener('click', () => {
+      setPage('work');
+      setWorkTab(button.dataset.workNav);
+    });
   });
   qsa('[data-health-nav]').forEach(button => {
     button.addEventListener('click', () => {
@@ -2571,6 +2677,7 @@ function bindEvents() {
   qs('#entityForm').addEventListener('change', event => {
     if (event.target.name === 'tipo') updateTransactionCategoryOptions();
     if (event.target.id === 'transactionCategorySelect') toggleCustomCategoryField();
+    if (event.target.id === 'accountCreditToggle') updateAccountCreditMode();
     if (event.target.id === 'goalTypeSelect') {
       qs('[name="unidade"]').value = '';
       updateGoalUnit();
@@ -2619,6 +2726,7 @@ function bindEvents() {
   document.body.addEventListener('click', event => {
     const modalButton = event.target.closest('[data-modal]');
     if (modalButton) {
+      if (modalButton.dataset.modal === 'work') state.workKind = modalButton.dataset.workKind || (state.workTab === 'estudos' ? 'Estudo' : 'Trabalho');
       if (modalButton.dataset.homeKind) state.homeKind = modalButton.dataset.homeKind;
       if (modalButton.dataset.healthKind) state.healthKind = modalButton.dataset.healthKind;
       openModal(modalButton.dataset.modal);

@@ -63,6 +63,10 @@
         <button class="nav-item" data-page="finance"><i class="fa-regular fa-credit-card"></i><span>Financeiro</span></button>
         <button class="nav-item" data-page="goals"><i class="fa-regular fa-circle-dot"></i><span>Metas</span></button>
         <button class="nav-item" data-page="work"><i class="fa-solid fa-graduation-cap"></i><span>Faculdade</span></button>
+        <div class="nav-sub" id="workSubnav">
+          <button class="nav-sub-item active" data-work-nav="tarefas"><i class="fa-solid fa-table-columns"></i><span>Tarefas</span></button>
+          <button class="nav-sub-item" data-work-nav="estudos"><i class="fa-solid fa-book-open-reader"></i><span>Estudos</span></button>
+        </div>
         <button class="nav-item" data-page="health"><i class="fa-solid fa-heart-pulse"></i><span>Saude</span></button>
         <div class="nav-sub" id="healthSubnav">
           <button class="nav-sub-item active" data-health-nav="alimentacao"><i class="fa-solid fa-utensils"></i><span>Alimentacao</span></button>
@@ -372,26 +376,36 @@
             <button class="primary-button" data-modal="work"><i class="fa-solid fa-plus"></i><span>Item</span></button>
           </section>
           <section class="work-overview" id="workOverview"></section>
-          <section class="academic-calendar-panel">
-            <div class="list-header">
-              <span>Calendario academico</span>
-              <span>Proximos prazos</span>
-            </div>
-            <div id="academicCalendar" class="academic-calendar"></div>
+          <section class="work-panel active" id="work-tab-tarefas">
+            <section class="academic-calendar-panel">
+              <div class="list-header">
+                <span>Calendario academico</span>
+                <span>Proximos prazos</span>
+              </div>
+              <div id="academicCalendar" class="academic-calendar"></div>
+            </section>
+            <section class="work-board kanban-board">
+              <article class="kanban-column" data-work-status="ativo">
+                <div class="panel-title">Pendente</div>
+                <div id="activeWorkList" class="work-card-grid" data-work-status="ativo"></div>
+              </article>
+              <article class="kanban-column" data-work-status="andamento">
+                <div class="panel-title">Em andamento</div>
+                <div id="pendingWorkList" class="work-card-grid" data-work-status="andamento"></div>
+              </article>
+              <article class="kanban-column" data-work-status="concluido">
+                <div class="panel-title">Concluido</div>
+                <div id="doneWorkList" class="work-card-grid" data-work-status="concluido"></div>
+              </article>
+            </section>
           </section>
-          <section class="work-board kanban-board">
-            <article class="kanban-column" data-work-status="ativo">
-              <div class="panel-title">Pendente</div>
-              <div id="activeWorkList" class="work-card-grid" data-work-status="ativo"></div>
-            </article>
-            <article class="kanban-column" data-work-status="andamento">
-              <div class="panel-title">Em andamento</div>
-              <div id="pendingWorkList" class="work-card-grid" data-work-status="andamento"></div>
-            </article>
-            <article class="kanban-column" data-work-status="concluido">
-              <div class="panel-title">Concluido</div>
-              <div id="doneWorkList" class="work-card-grid" data-work-status="concluido"></div>
-            </article>
+          <section class="work-panel" id="work-tab-estudos">
+            <div class="list-header">
+              <span>Estudos e materias</span>
+              <button class="pill-button" data-modal="work" data-work-kind="Estudo"><i class="fa-solid fa-plus"></i><span>Registrar estudo</span></button>
+            </div>
+            <section class="study-overview" id="studyOverview"></section>
+            <div id="studyList" class="study-grid"></div>
           </section>
         </div>
 

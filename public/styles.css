@@ -1997,7 +1997,7 @@ button { border: 0; cursor: pointer; }
 
 .work-overview {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) repeat(3, minmax(150px, .55fr));
+  grid-template-columns: minmax(240px, 1fr) repeat(4, minmax(140px, .52fr));
   gap: 12px;
   margin-bottom: 14px;
 }
@@ -2038,6 +2038,9 @@ button { border: 0; cursor: pointer; }
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
+
+.work-panel { display: none; }
+.work-panel.active { display: block; }
 
 .work-board .panel {
   min-height: 360px;
@@ -2148,6 +2151,67 @@ button { border: 0; cursor: pointer; }
   color: var(--muted);
   font-size: 12px;
   line-height: 1.5;
+}
+
+.study-overview,
+.study-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.study-overview {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 14px;
+}
+
+.study-summary-card,
+.study-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255,255,255,.03);
+}
+
+.study-summary-card {
+  min-height: 108px;
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.study-summary-card.primary {
+  background: linear-gradient(135deg, rgba(74,158,255,.16), rgba(46,204,138,.1));
+}
+
+.study-summary-card span,
+.study-summary-card small,
+.study-card-meta {
+  color: var(--subtle);
+}
+
+.study-summary-card strong {
+  font-size: 30px;
+}
+
+.study-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.study-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.study-card-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(0,0,0,.16);
 }
 
 .academic-calendar-panel {
@@ -2725,6 +2789,19 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
   border-color: rgba(74,158,255,.18);
 }
 
+.account-edit-section.credit-disabled {
+  border-color: var(--line);
+  opacity: .78;
+}
+
+.account-edit-section.credit-disabled .account-edit-grid {
+  opacity: .55;
+}
+
+.account-credit-toggle {
+  justify-content: flex-start;
+}
+
 .account-edit-title {
   display: flex;
   align-items: center;
@@ -2975,7 +3052,7 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
   .main { min-height: 100vh; }
   .menu-button { display: inline-flex !important; }
   .content { padding: 16px; }
-  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .health-overview, .health-edit-grid, .health-edit-grid.three, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .home-overview, .home-board, .home-edit-grid, .home-edit-grid.three, .bill-summary-grid, .pantry-essentials-head, .pantry-essential-grid, .email-grid { grid-template-columns: 1fr; }
+  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .health-overview, .health-edit-grid, .health-edit-grid.three, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .study-overview, .home-overview, .home-board, .home-edit-grid, .home-edit-grid.three, .bill-summary-grid, .pantry-essentials-head, .pantry-essential-grid, .email-grid { grid-template-columns: 1fr; }
   .statement-grid,
   .transaction-edit-grid,
   .goal-edit-grid,
