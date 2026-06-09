@@ -41,13 +41,6 @@ const transactionCategories = {
   entrada: ['Salario', 'Freela', 'Renda extra', 'Reembolso', 'Presente', 'Outros'],
   saida: ['Alimentacao', 'Transporte', 'Saude', 'Educacao', 'Lazer', 'Casa', 'Pessoal', 'Outros']
 };
-const notificationOptions = [
-  { key: 'finance', label: 'Financeiro', icon: 'fa-wallet' },
-  { key: 'home', label: 'Casa', icon: 'fa-house' },
-  { key: 'work', label: 'Faculdade', icon: 'fa-graduation-cap' },
-  { key: 'health', label: 'Saude', icon: 'fa-heart-pulse' },
-  { key: 'system', label: 'Sistema', icon: 'fa-sparkles' }
-];
 const pantryEssentialGroups = [
   {
     title: 'Base da cozinha',
@@ -854,7 +847,7 @@ function buildSmartSuggestions() {
 function renderSmartSuggestions() {
   const suggestions = buildSmartSuggestions();
   const dismissed = dismissedNotificationIds();
-  const visibleSuggestions = suggestions.filter(item => notificationPrefEnabled(item.kind)).filter(item => !dismissed.has(notificationId(item)));
+  const visibleSuggestions = suggestions.filter(item => !dismissed.has(notificationId(item)));
   const panel = qs('#smartPanel');
   const notificationAction = browserNotificationsSupported()
     ? `<button class="pill-button" type="button" data-enable-browser-notifications><i class="fa-regular fa-bell"></i><span>${Notification.permission === 'granted' ? 'Notificacoes ativas' : 'Ativar no celular'}</span></button>`
@@ -888,15 +881,6 @@ function renderSmartSuggestions() {
           <button class="mini-dismiss" type="button" data-dismiss-notification="${escapeHtml(notificationId(item))}" aria-label="Apagar notificacao"><i class="fa-solid fa-xmark"></i></button>
         </article>
       `).join('') || emptyTemplate('Nenhuma notificacao ativa agora.')}
-      <div class="notification-settings">
-        <strong>Receber avisos</strong>
-        ${notificationOptions.map(option => `
-          <label>
-            <input type="checkbox" data-notification-pref="${option.key}" ${notificationPrefEnabled(option.key) ? 'checked' : ''}>
-            <span><i class="fa-solid ${option.icon}"></i>${option.label}</span>
-          </label>
-        `).join('')}
-      </div>
       <div class="notification-actions">${notificationAction}</div>
     `;
   }
@@ -905,29 +889,6 @@ function renderSmartSuggestions() {
 
 function notificationStorageKey(name) {
   return `${name}:${state.user?.email || state.user?.username || 'local'}`;
-}
-
-function notificationPrefs() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(notificationStorageKey('lasttroNotificationPrefs')) || '{}');
-    return notificationOptions.reduce((acc, option) => {
-      acc[option.key] = saved[option.key] !== false;
-      return acc;
-    }, {});
-  } catch {
-    return notificationOptions.reduce((acc, option) => ({ ...acc, [option.key]: true }), {});
-  }
-}
-
-function notificationPrefEnabled(kind = 'system') {
-  return notificationPrefs()[kind] !== false;
-}
-
-function setNotificationPref(kind, enabled) {
-  const prefs = notificationPrefs();
-  prefs[kind] = enabled;
-  localStorage.setItem(notificationStorageKey('lasttroNotificationPrefs'), JSON.stringify(prefs));
-  renderSmartSuggestions();
 }
 
 function notificationId(item) {
@@ -3575,12 +3536,6 @@ function bindEvents() {
   });
 
   document.body.addEventListener('change', event => {
-    const notificationPref = event.target.closest('[data-notification-pref]');
-    if (notificationPref) {
-      setNotificationPref(notificationPref.dataset.notificationPref, notificationPref.checked);
-      return;
-    }
-
     const pantryItem = event.target.closest('[data-add-pantry-shopping]');
     if (pantryItem) {
       togglePantryShopping(pantryItem.dataset.addPantryShopping, pantryItem.checked);
