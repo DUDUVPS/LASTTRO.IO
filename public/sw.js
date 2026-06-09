@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lasttro-pwa-v1';
+const CACHE_NAME = 'lasttro-pwa-v2';
 const APP_SHELL = [
   '/',
   '/app',
@@ -44,5 +44,17 @@ self.addEventListener('fetch', event => {
         return response;
       })
       .catch(() => caches.match(event.request).then(cached => cached || caches.match('/app')))
+  );
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || '/app';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      const existing = clientList.find(client => client.url.includes(targetUrl));
+      if (existing) return existing.focus();
+      return clients.openWindow(targetUrl);
+    })
   );
 });

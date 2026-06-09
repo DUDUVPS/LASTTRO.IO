@@ -615,6 +615,9 @@ function buildSmartSuggestions() {
 function renderSmartSuggestions() {
   const suggestions = buildSmartSuggestions();
   const panel = qs('#smartPanel');
+  const notificationAction = browserNotificationsSupported()
+    ? `<button class="pill-button" type="button" data-enable-browser-notifications><i class="fa-regular fa-bell"></i><span>${Notification.permission === 'granted' ? 'Testar no celular' : 'Ativar no celular'}</span></button>`
+    : '<small>Notificacoes do sistema indisponiveis neste navegador.</small>';
   if (panel) {
     panel.innerHTML = `
       <div>
@@ -636,8 +639,10 @@ function renderSmartSuggestions() {
           <span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.text)}</small></span>
         </article>
       `).join('')}
+      <div class="notification-actions">${notificationAction}</div>
     `;
   }
+  maybeNotifySmartSuggestion(suggestions);
 }
 
 function showToast(title, text) {
@@ -648,6 +653,61 @@ function showToast(title, text) {
   toast.innerHTML = `<strong>${escapeHtml(title)}</strong><small>${escapeHtml(text)}</small>`;
   stack.appendChild(toast);
   setTimeout(() => toast.remove(), 4500);
+}
+
+function browserNotificationsSupported() {
+  return 'Notification' in window;
+}
+
+async function sendBrowserNotification(title, body) {
+  const options = {
+    body,
+    icon: '/assets/app-icon-192.png',
+    badge: '/assets/favicon-32.png',
+    tag: 'lasttro-smart',
+    data: { url: '/app' }
+  };
+  if ('serviceWorker' in navigator) {
+    const registration = await navigator.serviceWorker.ready;
+    if (registration?.showNotification) return registration.showNotification(title, options);
+  }
+  return new Notification(title, options);
+}
+
+async function enableBrowserNotifications() {
+  if (!browserNotificationsSupported()) {
+    showToast('Nao disponivel', 'Este navegador nao liberou notificacoes para o app.');
+    return;
+  }
+  let permission = Notification.permission;
+  if (permission === 'default') permission = await Notification.requestPermission();
+  if (permission !== 'granted') {
+    showToast('Notificacoes bloqueadas', 'Ative a permissao do site no Chrome para receber no celular.');
+    renderSmartSuggestions();
+    return;
+  }
+  localStorage.setItem('lasttroNotificationsEnabled', 'true');
+  const first = buildSmartSuggestions()[0] || { title: 'LASTTRO', text: 'Notificacoes ativadas.' };
+  const today = new Date().toISOString().slice(0, 10);
+  localStorage.setItem('lasttroLastSmartNotification', `${today}:${first.title}`);
+  await sendBrowserNotification(first.title, first.text);
+  showToast('Notificacoes ativas', 'O LASTTRO pode avisar no Android quando o app estiver instalado ou aberto.');
+  renderSmartSuggestions();
+}
+
+function maybeNotifySmartSuggestion(suggestions) {
+  if (!browserNotificationsSupported()) return;
+  if (Notification.permission !== 'granted') return;
+  if (localStorage.getItem('lasttroNotificationsEnabled') !== 'true') return;
+  const first = suggestions[0];
+  if (!first) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const key = `${today}:${first.title}`;
+  if (localStorage.getItem('lasttroLastSmartNotification') === key) return;
+  localStorage.setItem('lasttroLastSmartNotification', key);
+  sendBrowserNotification(first.title, first.text).catch(() => {
+    localStorage.removeItem('lasttroLastSmartNotification');
+  });
 }
 
 function renderMonthlyStatements() {
@@ -1908,7 +1968,13 @@ function emptyTemplate(text) {
   return `<div class="empty">${escapeHtml(text)}</div>`;
 }
 
-function setPage(page) {
+function closeMobileSidebar() {
+  qs('#sidebar')?.classList.remove('mobile-open');
+  qs('#overlay')?.classList.remove('show');
+}
+
+function setPage(page, options = {}) {
+  const { closeSidebar = true } = options;
   state.page = page;
   qsa('.view').forEach(view => view.classList.toggle('active', view.id === `view-${page}`));
   qsa('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.page === page));
@@ -1917,8 +1983,7 @@ function setPage(page) {
   qs('#homeSubnav')?.classList.toggle('show', page === 'home');
   qs('#pageTitle').textContent = pages[page].title;
   qs('#pageSubtitle').textContent = pages[page].subtitle;
-  qs('#sidebar').classList.remove('mobile-open');
-  qs('#overlay').classList.remove('show');
+  if (closeSidebar) closeMobileSidebar();
 }
 
 function setFinanceTab(tabName) {
@@ -2789,7 +2854,10 @@ function bindEvents() {
   qs('#refreshGmailButton')?.addEventListener('click', refreshGmail);
   qs('#sendGmailButton')?.addEventListener('click', sendGmail);
   qs('#notificationButton')?.addEventListener('click', () => qs('#notificationPopout')?.classList.toggle('show'));
-  qsa('.nav-item').forEach(item => item.addEventListener('click', () => setPage(item.dataset.page)));
+  qsa('.nav-item').forEach(item => item.addEventListener('click', () => {
+    const opensSubnav = ['work', 'health', 'home'].includes(item.dataset.page);
+    setPage(item.dataset.page, { closeSidebar: !opensSubnav });
+  }));
   qsa('[data-go]').forEach(item => item.addEventListener('click', () => setPage(item.dataset.go)));
   qsa('[data-modal]').forEach(button => button.addEventListener('click', event => {
     event.stopPropagation();
@@ -2803,20 +2871,23 @@ function bindEvents() {
   });
   qsa('[data-work-nav]').forEach(button => {
     button.addEventListener('click', () => {
-      setPage('work');
+      setPage('work', { closeSidebar: false });
       setWorkTab(button.dataset.workNav);
+      closeMobileSidebar();
     });
   });
   qsa('[data-health-nav]').forEach(button => {
     button.addEventListener('click', () => {
-      setPage('health');
+      setPage('health', { closeSidebar: false });
       setHealthTab(button.dataset.healthNav);
+      closeMobileSidebar();
     });
   });
   qsa('[data-home-nav]').forEach(button => {
     button.addEventListener('click', () => {
-      setPage('home');
+      setPage('home', { closeSidebar: false });
       setHomeTab(button.dataset.homeNav);
+      closeMobileSidebar();
     });
   });
   qsa('.filter').forEach(button => {
@@ -2844,8 +2915,7 @@ function bindEvents() {
     qs('#overlay').classList.add('show');
   });
   qs('#overlay').addEventListener('click', () => {
-    qs('#sidebar').classList.remove('mobile-open');
-    qs('#overlay').classList.remove('show');
+    closeMobileSidebar();
   });
   qs('#entityForm').addEventListener('submit', submitModal);
   qs('#entityForm').addEventListener('change', event => {
@@ -2899,6 +2969,12 @@ function bindEvents() {
   });
 
   document.body.addEventListener('click', event => {
+    const notificationEnableButton = event.target.closest('[data-enable-browser-notifications]');
+    if (notificationEnableButton) {
+      enableBrowserNotifications();
+      return;
+    }
+
     const modalButton = event.target.closest('[data-modal]');
     if (modalButton) {
       if (modalButton.dataset.modal === 'work') state.workKind = modalButton.dataset.workKind || (state.workTab === 'estudos' ? 'Estudo' : 'Trabalho');
