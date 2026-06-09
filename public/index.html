@@ -273,6 +273,21 @@
           <div class="finance-panel" id="finance-tab-movements">
             <section class="finance-insights" id="financeInsights"></section>
 
+            <section class="report-panel">
+              <div class="list-header">
+                <span>Relatorio do mes</span>
+                <span id="reportPeriod">Mes atual</span>
+              </div>
+              <div id="financeReport" class="report-grid"></div>
+              <article class="report-chart-panel">
+                <div class="panel-title-row">
+                  <div class="panel-title">Evolucao dos ultimos 6 meses</div>
+                  <span>entradas, saidas e resultado</span>
+                </div>
+                <div class="report-chart-wrap"><canvas id="monthlyTrendChart"></canvas></div>
+              </article>
+            </section>
+
             <div class="finance-toolbar">
               <label class="search-field">
                 <i class="fa-solid fa-magnifying-glass"></i>

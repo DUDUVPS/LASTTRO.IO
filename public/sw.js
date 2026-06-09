@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lasttro-pwa-v2';
+const CACHE_NAME = 'lasttro-pwa-v3';
 const APP_SHELL = [
   '/',
   '/app',
@@ -44,6 +44,31 @@ self.addEventListener('fetch', event => {
         return response;
       })
       .catch(() => caches.match(event.request).then(cached => cached || caches.match('/app')))
+  );
+});
+
+self.addEventListener('push', event => {
+  let payload = {
+    title: 'LASTTRO',
+    body: 'Voce tem uma nova notificacao.',
+    url: '/app',
+    tag: 'lasttro-push'
+  };
+
+  try {
+    payload = { ...payload, ...event.data.json() };
+  } catch {
+    if (event.data) payload.body = event.data.text();
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: '/assets/app-icon-192.png',
+      badge: '/assets/favicon-32.png',
+      tag: payload.tag,
+      data: { url: payload.url || '/app' }
+    })
   );
 });
 

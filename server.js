@@ -5,6 +5,13 @@ const crypto = require('crypto');
 const querystring = require('querystring');
 const { execSync } = require('child_process');
 const packageInfo = require('./package.json');
+let webpush = null;
+
+try {
+  webpush = require('web-push');
+} catch {
+  webpush = null;
+}
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -15,8 +22,16 @@ const DB_FILE = path.join(DATA_DIR, 'db.json');
 const DATABASE_URL = process.env.DATABASE_URL || process.env.MYSQL_URL || '';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:contato@lasttro.app';
+const PUSH_ENABLED = Boolean(webpush && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY);
 const APP_COMMIT = (process.env.RAILWAY_GIT_COMMIT_SHA || process.env.RENDER_GIT_COMMIT || getGitCommit()).slice(0, 7) || 'local';
 const APP_VERSION = { version: packageInfo.version || '1.0.0', commit: APP_COMMIT };
+
+if (PUSH_ENABLED) {
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+}
 
 const initialData = {
   transacoes: [
@@ -228,7 +243,8 @@ function normalizeUser(user = {}) {
     username: email,
     passwordHash: user.passwordHash || '',
     avatar: typeof user.avatar === 'string' ? user.avatar : '',
-    gmail: user.gmail && typeof user.gmail === 'object' ? user.gmail : null
+    gmail: user.gmail && typeof user.gmail === 'object' ? user.gmail : null,
+    pushSubscriptions: Array.isArray(user.pushSubscriptions) ? user.pushSubscriptions : []
   };
 }
 
@@ -247,6 +263,82 @@ function normalizeAuth(auth = {}) {
 
 function publicUser(user) {
   return { email: user.email, username: user.email, avatar: user.avatar || '', gmailConnected: Boolean(user.gmail?.refreshToken || user.gmail?.accessToken) };
+}
+
+function formatServerMoney(value) {
+  return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function buildPushAlerts(data) {
+  const resumo = buildResumo(data);
+  const alerts = [];
+  const today = new Date().toISOString().slice(0, 10);
+  const soon = new Date();
+  soon.setDate(soon.getDate() + 3);
+  const soonDate = soon.toISOString().slice(0, 10);
+  const nextBill = (data.casa || [])
+    .filter(item => item.tipo === 'conta' && item.status !== 'feito' && item.vencimento)
+    .filter(item => item.vencimento >= today && item.vencimento <= soonDate)
+    .sort((a, b) => a.vencimento.localeCompare(b.vencimento))[0];
+
+  if (nextBill) {
+    alerts.push({
+      title: 'Boleto chegando',
+      body: `${nextBill.nome} vence em ${nextBill.vencimento.split('-').reverse().join('/')} no valor de ${formatServerMoney(nextBill.valor)}.`
+    });
+  }
+
+  const lowPantry = (data.casa || [])
+    .filter(item => item.tipo === 'despensa')
+    .filter(item => Number(item.quantidade || 0) <= Number(item.minimo || 0));
+  if (lowPantry.length) {
+    alerts.push({
+      title: 'Despensa em baixo nivel',
+      body: `${lowPantry.slice(0, 3).map(item => item.nome).join(', ')}${lowPantry.length > 3 ? ` e mais ${lowPantry.length - 3}` : ''}.`
+    });
+  }
+
+  if (Number(resumo.gastos || 0) > Number(resumo.entradas || 0)) {
+    alerts.push({
+      title: 'Gastos acima das entradas',
+      body: `Saidas do mes em ${formatServerMoney(resumo.gastos)}. Vale revisar antes de comprar mais.`
+    });
+  } else if (Number(resumo.saldo || 0) > 0) {
+    alerts.push({
+      title: 'Que tal investir hoje?',
+      body: `Voce tem ${formatServerMoney(resumo.saldo)} de saldo. Uma parte pequena ja ajuda seu patrimonio.`
+    });
+  }
+
+  return alerts.length ? alerts : [{ title: 'LASTTRO em dia', body: 'Tudo tranquilo por aqui. Continue alimentando seus dados.' }];
+}
+
+async function sendPushToUser(user, payload) {
+  if (!PUSH_ENABLED) return { sent: 0, failed: 0, removed: 0, configured: false };
+  const subscriptions = Array.isArray(user.pushSubscriptions) ? user.pushSubscriptions : [];
+  let sent = 0;
+  let failed = 0;
+  const keep = [];
+  const message = JSON.stringify({
+    title: payload.title || 'LASTTRO',
+    body: payload.body || 'Nova notificacao do LASTTRO.',
+    url: '/app',
+    tag: payload.tag || 'lasttro-push'
+  });
+
+  for (const subscription of subscriptions) {
+    try {
+      await webpush.sendNotification(subscription, message);
+      keep.push(subscription);
+      sent += 1;
+    } catch (error) {
+      failed += 1;
+      if (![404, 410].includes(Number(error.statusCode))) keep.push(subscription);
+    }
+  }
+
+  user.pushSubscriptions = keep;
+  return { sent, failed, removed: subscriptions.length - keep.length, configured: true };
 }
 
 function createSession(email) {
@@ -807,6 +899,40 @@ async function handleApi(req, res, pathname) {
     currentUser.avatar = avatar;
     await writeDb(db);
     return send(res, 200, { user: publicUser(currentUser) });
+  }
+
+  if (req.method === 'GET' && pathname === '/api/push/public-key') {
+    return send(res, 200, {
+      enabled: PUSH_ENABLED,
+      publicKey: PUSH_ENABLED ? VAPID_PUBLIC_KEY : '',
+      configured: PUSH_ENABLED
+    });
+  }
+
+  if (req.method === 'POST' && pathname === '/api/push/subscribe') {
+    if (!currentUser) return send(res, 404, { error: 'Usuario nao encontrado' });
+    const subscription = await readBody(req);
+    if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+      return send(res, 400, { error: 'Assinatura de notificacao invalida' });
+    }
+    const subscriptions = Array.isArray(currentUser.pushSubscriptions) ? currentUser.pushSubscriptions : [];
+    currentUser.pushSubscriptions = [
+      subscription,
+      ...subscriptions.filter(item => item.endpoint !== subscription.endpoint)
+    ].slice(0, 8);
+    await writeDb(db);
+    return send(res, 201, { ok: true, enabled: PUSH_ENABLED, count: currentUser.pushSubscriptions.length });
+  }
+
+  if (req.method === 'POST' && pathname === '/api/push/test') {
+    if (!currentUser) return send(res, 404, { error: 'Usuario nao encontrado' });
+    if (!PUSH_ENABLED) {
+      return send(res, 503, { error: 'Push real ainda nao configurado no servidor' });
+    }
+    const alert = buildPushAlerts(data)[0];
+    const result = await sendPushToUser(currentUser, alert);
+    await writeDb(db);
+    return send(res, 200, { ok: true, alert, ...result });
   }
 
   if (req.method === 'GET' && pathname === '/api/dashboard') {

@@ -692,6 +692,67 @@ button { border: 0; cursor: pointer; }
   gap: 12px;
 }
 
+.report-panel {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 18px;
+  padding: 14px;
+  border: 1px solid rgba(168,85,247,.18);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(168,85,247,.08), rgba(74,158,255,.045));
+}
+
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.report-card {
+  min-height: 106px;
+  display: grid;
+  align-content: space-between;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(0,0,0,.18);
+}
+
+.report-card span {
+  color: var(--subtle);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.report-card strong {
+  font-family: Rajdhani, sans-serif;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.report-card small {
+  color: var(--muted);
+}
+
+.report-card.positive strong { color: var(--green); }
+.report-card.negative strong { color: var(--red); }
+
+.report-chart-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255,255,255,.025);
+}
+
+.report-chart-wrap {
+  height: 250px;
+}
+
 .statement-card {
   display: grid;
   gap: 8px;
@@ -3177,7 +3238,7 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
   .main { min-height: 100vh; }
   .menu-button { display: inline-flex !important; }
   .content { padding: 16px; }
-  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .health-overview, .health-edit-grid, .health-edit-grid.three, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .study-overview, .study-subject-list, .study-edit-grid, .home-overview, .home-board, .home-edit-grid, .home-edit-grid.three, .bill-summary-grid, .pantry-essentials-head, .pantry-essential-grid, .email-grid { grid-template-columns: 1fr; }
+  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .health-overview, .health-edit-grid, .health-edit-grid.three, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .study-overview, .study-subject-list, .study-edit-grid, .home-overview, .home-board, .home-edit-grid, .home-edit-grid.three, .bill-summary-grid, .pantry-essentials-head, .pantry-essential-grid, .email-grid, .report-grid { grid-template-columns: 1fr; }
   .statement-grid,
   .transaction-edit-grid,
   .goal-edit-grid,

@@ -12,6 +12,7 @@ const state = {
   chart: null,
   overviewInvestmentChart: null,
   investmentChart: null,
+  monthlyTrendChart: null,
   modalType: null,
   editing: null,
   workKind: 'Trabalho',
@@ -560,6 +561,7 @@ function renderFinance() {
     .sort(sortTransactions);
   const total = filtered.reduce((sum, item) => sum + Number(item.val || 0), 0);
 
+  renderFinanceReport();
   renderFinanceInsights();
   renderMovementCategories(base);
   qs('#transactionsCount').textContent = `${filtered.length} ${filtered.length === 1 ? 'transacao' : 'transacoes'}`;
@@ -659,6 +661,13 @@ function browserNotificationsSupported() {
   return 'Notification' in window;
 }
 
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+}
+
 async function sendBrowserNotification(title, body) {
   const options = {
     body,
@@ -672,6 +681,29 @@ async function sendBrowserNotification(title, body) {
     if (registration?.showNotification) return registration.showNotification(title, options);
   }
   return new Notification(title, options);
+}
+
+async function subscribePushNotifications() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    return { subscribed: false, reason: 'Push indisponivel neste navegador.' };
+  }
+  const config = await api('/api/push/public-key');
+  if (!config.enabled || !config.publicKey) {
+    return { subscribed: false, reason: 'Configure as chaves VAPID no Railway para notificacoes reais.' };
+  }
+  const registration = await navigator.serviceWorker.ready;
+  let subscription = await registration.pushManager.getSubscription();
+  if (!subscription) {
+    subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(config.publicKey)
+    });
+  }
+  await api('/api/push/subscribe', {
+    method: 'POST',
+    body: JSON.stringify(subscription)
+  });
+  return { subscribed: true };
 }
 
 async function enableBrowserNotifications() {
@@ -690,8 +722,14 @@ async function enableBrowserNotifications() {
   const first = buildSmartSuggestions()[0] || { title: 'LASTTRO', text: 'Notificacoes ativadas.' };
   const today = new Date().toISOString().slice(0, 10);
   localStorage.setItem('lasttroLastSmartNotification', `${today}:${first.title}`);
-  await sendBrowserNotification(first.title, first.text);
-  showToast('Notificacoes ativas', 'O LASTTRO pode avisar no Android quando o app estiver instalado ou aberto.');
+  const push = await subscribePushNotifications().catch(error => ({ subscribed: false, reason: safeApiError(error.message) || error.message }));
+  if (push.subscribed) {
+    await api('/api/push/test', { method: 'POST' }).catch(() => sendBrowserNotification(first.title, first.text));
+    showToast('Notificacoes ativas', 'Seu celular ficou inscrito para receber avisos do LASTTRO.');
+  } else {
+    await sendBrowserNotification(first.title, first.text);
+    showToast('Notificacao local ativa', push.reason || 'Para receber avisos reais, instale o app e configure o servidor.');
+  }
   renderSmartSuggestions();
 }
 
@@ -988,6 +1026,121 @@ function sortTransactions(a, b) {
   if (state.transactionSort === 'value-asc') return Math.abs(a.val) - Math.abs(b.val);
   if (state.transactionSort === 'name') return a.nome.localeCompare(b.nome, 'pt-BR');
   return new Date(b.data) - new Date(a.data);
+}
+
+function monthKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function shiftMonth(month, amount) {
+  const [year, monthNumber] = month.split('-').map(Number);
+  return monthKey(new Date(year, monthNumber - 1 + amount, 1));
+}
+
+function monthLabel(month) {
+  return new Date(`${month}-02T00:00:00`).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+}
+
+function monthTransactions(month) {
+  return state.data.transacoes
+    .filter(item => item.tipo !== 'investimento')
+    .filter(item => String(item.data || '').startsWith(month));
+}
+
+function monthReport(month) {
+  const transactions = monthTransactions(month);
+  const entradas = transactions.filter(item => item.tipo === 'entrada').reduce((sum, item) => sum + Number(item.val || 0), 0);
+  const saidas = Math.abs(transactions.filter(item => item.tipo === 'saida').reduce((sum, item) => sum + Number(item.val || 0), 0));
+  const byCategory = transactions
+    .filter(item => item.tipo === 'saida')
+    .reduce((acc, item) => {
+      const category = item.cat || 'Sem categoria';
+      acc[category] = (acc[category] || 0) + Math.abs(Number(item.val || 0));
+      return acc;
+    }, {});
+  const topCategory = Object.entries(byCategory)
+    .map(([nome, valor]) => ({ nome, valor }))
+    .sort((a, b) => b.valor - a.valor)[0];
+
+  return {
+    month,
+    transactions,
+    entradas,
+    saidas,
+    resultado: entradas - saidas,
+    topCategory,
+    ticketMedio: transactions.length ? (entradas + saidas) / transactions.length : 0
+  };
+}
+
+function deltaPercent(current, previous) {
+  if (!previous && current) return 100;
+  if (!previous) return 0;
+  return Math.round(((current - previous) / Math.abs(previous)) * 100);
+}
+
+function reportCardTemplate(label, value, detail, type = '') {
+  return `
+    <article class="report-card ${type}">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      <small>${escapeHtml(detail)}</small>
+    </article>
+  `;
+}
+
+function renderFinanceReport() {
+  const currentMonth = monthKey();
+  const previousMonth = shiftMonth(currentMonth, -1);
+  const current = monthReport(currentMonth);
+  const previous = monthReport(previousMonth);
+  const reportPeriod = qs('#reportPeriod');
+  if (reportPeriod) reportPeriod.textContent = new Date(`${currentMonth}-02T00:00:00`).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+  const expenseDelta = deltaPercent(current.saidas, previous.saidas);
+  const incomeDelta = deltaPercent(current.entradas, previous.entradas);
+  const resultDelta = current.resultado - previous.resultado;
+  const report = qs('#financeReport');
+  if (report) {
+    report.innerHTML = [
+      reportCardTemplate('Entradas', formatMoney(current.entradas), `${incomeDelta >= 0 ? '+' : ''}${incomeDelta}% vs mes anterior`, 'positive'),
+      reportCardTemplate('Saidas', formatMoney(current.saidas), `${expenseDelta >= 0 ? '+' : ''}${expenseDelta}% vs mes anterior`, 'negative'),
+      reportCardTemplate('Resultado', formatMoney(current.resultado), `${resultDelta >= 0 ? '+' : ''}${formatMoney(resultDelta)} de diferenca`, current.resultado >= 0 ? 'positive' : 'negative'),
+      reportCardTemplate('Categoria lider', current.topCategory?.nome || 'Sem saidas', current.topCategory ? formatMoney(current.topCategory.valor) : 'Nada registrado', ''),
+      reportCardTemplate('Ticket medio', formatMoney(current.ticketMedio), `${current.transactions.length} lancamentos no mes`, ''),
+      reportCardTemplate('Extrato', `${current.transactions.length} itens`, 'Do dia 1 ao ultimo dia do mes', '')
+    ].join('');
+  }
+
+  renderMonthlyTrendChart(currentMonth);
+}
+
+function renderMonthlyTrendChart(currentMonth) {
+  const ctx = qs('#monthlyTrendChart');
+  if (!window.Chart || !ctx) return;
+  const months = Array.from({ length: 6 }, (_, index) => shiftMonth(currentMonth, index - 5));
+  const reports = months.map(monthReport);
+  if (state.monthlyTrendChart) state.monthlyTrendChart.destroy();
+  state.monthlyTrendChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: months.map(monthLabel),
+      datasets: [
+        { label: 'Entradas', data: reports.map(item => item.entradas), backgroundColor: 'rgba(168,85,247,.74)', borderRadius: 8 },
+        { label: 'Saidas', data: reports.map(item => item.saidas), backgroundColor: 'rgba(232,77,77,.72)', borderRadius: 8 },
+        { label: 'Resultado', data: reports.map(item => item.resultado), type: 'line', borderColor: '#4a9eff', backgroundColor: '#4a9eff', tension: .35, pointRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#eef3f8' } } },
+      scales: {
+        x: { ticks: { color: '#8f969b' }, grid: { color: 'rgba(255,255,255,.05)' } },
+        y: { ticks: { color: '#8f969b' }, grid: { color: 'rgba(255,255,255,.06)' } }
+      }
+    }
+  });
 }
 
 function renderFinanceInsights() {

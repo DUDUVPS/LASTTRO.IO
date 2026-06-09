@@ -12,9 +12,13 @@ HOST=0.0.0.0
 MYSQL_URL=valor_do_mysql_no_railway
 GOOGLE_CLIENT_ID=seu_client_id_google
 GOOGLE_CLIENT_SECRET=seu_client_secret_google
+VAPID_PUBLIC_KEY=sua_chave_publica_de_push
+VAPID_PRIVATE_KEY=sua_chave_privada_de_push
+VAPID_SUBJECT=mailto:seu_email@gmail.com
 ```
 
 O LASTTRO usa MySQL quando encontra `MYSQL_URL` ou `DATABASE_URL`. No Railway, use a referencia de variavel do servico MySQL.
+As notificacoes reais no celular usam as chaves `VAPID_*`. Gere uma vez com `npx web-push generate-vapid-keys` e salve no Railway.
 
 5. O Railway vai usar `railway.json` e `package.json` para iniciar o app.
 
