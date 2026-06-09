@@ -903,6 +903,25 @@ async function handleApi(req, res, pathname) {
     return send(res, 200, { user: publicUser(currentUser) });
   }
 
+  if (req.method === 'GET' && pathname === '/api/backup') {
+    return send(res, 200, {
+      exportedAt: new Date().toISOString(),
+      app: 'LASTTRO',
+      version: APP_VERSION,
+      user: publicUser(currentUser || { email: userEmail }),
+      data
+    });
+  }
+
+  if (req.method === 'POST' && pathname === '/api/backup') {
+    const body = await readBody(req);
+    const imported = body.data && typeof body.data === 'object' ? body.data : body;
+    if (!imported || typeof imported !== 'object') return send(res, 400, { error: 'Backup invalido' });
+    db.accountsData[normalizeEmail(userEmail)] = normalizeUserData(imported);
+    await writeDb(db);
+    return send(res, 200, { ok: true, data: db.accountsData[normalizeEmail(userEmail)], resumo: buildResumo(db.accountsData[normalizeEmail(userEmail)]) });
+  }
+
   if (req.method === 'GET' && pathname === '/api/push/public-key') {
     return send(res, 200, {
       enabled: PUSH_ENABLED,

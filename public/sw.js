@@ -4,6 +4,7 @@ const APP_SHELL = [
   '/app',
   '/index.html',
   '/apresentacao.html',
+  '/offline.html',
   '/styles.css',
   '/presentation.css',
   '/app.js',
@@ -43,7 +44,10 @@ self.addEventListener('fetch', event => {
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
         return response;
       })
-      .catch(() => caches.match(event.request).then(cached => cached || caches.match('/app')))
+      .catch(() => {
+        if (event.request.mode === 'navigate') return caches.match('/offline.html');
+        return caches.match(event.request).then(cached => cached || caches.match('/app'));
+      })
   );
 });
 

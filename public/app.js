@@ -22,7 +22,8 @@ const state = {
   gmailMessages: [],
   authMode: 'login',
   authToken: localStorage.getItem('lasttroToken') || '',
-  user: JSON.parse(localStorage.getItem('lasttroUser') || 'null')
+  user: JSON.parse(localStorage.getItem('lasttroUser') || 'null'),
+  shortcutApplied: false
 };
 
 const pages = {
@@ -40,6 +41,13 @@ const transactionCategories = {
   entrada: ['Salario', 'Freela', 'Renda extra', 'Reembolso', 'Presente', 'Outros'],
   saida: ['Alimentacao', 'Transporte', 'Saude', 'Educacao', 'Lazer', 'Casa', 'Pessoal', 'Outros']
 };
+const notificationOptions = [
+  { key: 'finance', label: 'Financeiro', icon: 'fa-wallet' },
+  { key: 'home', label: 'Casa', icon: 'fa-house' },
+  { key: 'work', label: 'Faculdade', icon: 'fa-graduation-cap' },
+  { key: 'health', label: 'Saude', icon: 'fa-heart-pulse' },
+  { key: 'system', label: 'Sistema', icon: 'fa-sparkles' }
+];
 const pantryEssentialGroups = [
   {
     title: 'Base da cozinha',
@@ -95,6 +103,32 @@ function formatMoney(value) {
 
 function formatDecimal(value) {
   return Number(value || 0).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+}
+
+function localDateKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function formatDatePt(date) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) return String(date || 'Sem data');
+  return new Date(`${date}T00:00:00`).toLocaleDateString('pt-BR');
+}
+
+function daysBetween(date) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) return null;
+  const today = new Date(`${localDateKey()}T00:00:00`);
+  const target = new Date(`${date}T00:00:00`);
+  return Math.round((target - today) / 86400000);
+}
+
+function relativeDate(date) {
+  const days = daysBetween(date);
+  if (days === null) return 'Sem data';
+  if (days === 0) return 'Hoje';
+  if (days === 1) return 'Amanha';
+  if (days === -1) return 'Ontem';
+  if (days > 1) return `Em ${days} dias`;
+  return `${Math.abs(days)} dias atras`;
 }
 
 function parseDecimal(value) {
@@ -154,6 +188,21 @@ async function loadDashboard() {
   }
   await loadGmailStatus();
   renderAll();
+  applyUrlShortcut();
+}
+
+function applyUrlShortcut() {
+  if (state.shortcutApplied) return;
+  const shortcut = new URLSearchParams(window.location.search).get('atalho');
+  if (!shortcut) return;
+  state.shortcutApplied = true;
+  if (shortcut === 'financeiro') setPage('finance');
+  if (shortcut === 'hoje') setPage('overview');
+  if (shortcut === 'movimentacao') {
+    setPage('finance');
+    setFinanceTab('movements');
+    openModal('transaction');
+  }
 }
 
 async function loadGmailStatus() {
@@ -417,6 +466,46 @@ async function removeProfilePhoto() {
   }
 }
 
+async function exportBackup() {
+  try {
+    const payload = await api('/api/backup');
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `lasttro-backup-${localDateKey()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    showToast('Backup baixado', 'Arquivo JSON salvo com seus dados atuais.');
+  } catch (error) {
+    showToast('Erro no backup', safeApiError(error.message) || 'Nao foi possivel baixar seus dados.');
+  }
+}
+
+function requestBackupImport() {
+  qs('#backupFileInput')?.click();
+}
+
+async function importBackup(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    if (!confirm('Restaurar este backup vai substituir os dados atuais desta conta. Continuar?')) return;
+    await api('/api/backup', { method: 'POST', body: JSON.stringify(payload) });
+    await loadDashboard();
+    closeSettings();
+    showToast('Backup restaurado', 'Seus dados foram atualizados com o arquivo importado.');
+  } catch (error) {
+    showToast('Backup invalido', safeApiError(error.message) || 'Nao foi possivel importar este arquivo.');
+  } finally {
+    event.target.value = '';
+  }
+}
+
 async function initAuth() {
   if (!state.authToken) {
     showLogin('');
@@ -460,6 +549,8 @@ function renderSummary() {
 
 function renderOverview() {
   const { transacoes, metas, trabalhos, resumo, investimentosCarteira } = state.data;
+  renderTodayHub();
+  renderAgendaHub();
   renderCategoryChart(resumo.porCategoria);
   renderOverviewInvestmentChart(investimentosCarteira);
 
@@ -571,12 +662,129 @@ function renderFinance() {
   renderMonthlyStatements();
 }
 
+function buildTodayItems() {
+  const today = localDateKey();
+  const items = [];
+  const resumo = state.data.resumo || {};
+  const dueBills = (state.data.casa || [])
+    .filter(item => item.tipo === 'conta' && item.status !== 'feito' && item.vencimento)
+    .map(item => ({ ...item, days: daysBetween(item.vencimento) }))
+    .filter(item => item.days !== null && item.days <= 3)
+    .sort((a, b) => a.days - b.days);
+  const lowPantry = (state.data.casa || [])
+    .filter(item => item.tipo === 'despensa' && Number(item.quantidade || 0) <= Number(item.minimo || 0));
+  const nextWork = (state.data.trabalhos || [])
+    .filter(item => item.status !== 'concluido' && item.inicio)
+    .map(item => ({ ...item, days: daysBetween(item.inicio) }))
+    .filter(item => item.days !== null && item.days <= 7)
+    .sort((a, b) => a.days - b.days)[0];
+  const todayHealth = (state.data.saude || []).filter(item => item.data === today);
+  const water = todayHealth.filter(item => item.tipo === 'hidratacao').reduce((sum, item) => sum + Number(item.quantidade || 0), 0);
+  const calories = todayHealth.filter(item => item.tipo === 'dieta' || item.tipo === 'alimentacao').reduce((sum, item) => sum + Number(item.calorias || 0), 0);
+  const trained = todayHealth.some(item => item.tipo === 'treino');
+  const pendingMeds = todayHealth.filter(item => item.tipo === 'medicamentos' && item.status !== 'feito');
+  const pendingShopping = (state.data.casa || []).filter(item => item.tipo === 'compra' && item.status !== 'feito');
+
+  if (dueBills.length) items.push(todayItem('fa-file-invoice-dollar', 'Boleto para resolver', `${dueBills[0].nome} - ${relativeDate(dueBills[0].vencimento)} - ${formatMoney(dueBills[0].valor)}`, 'home'));
+  if (lowPantry.length) items.push(todayItem('fa-boxes-stacked', 'Despensa baixa', `${lowPantry.slice(0, 3).map(item => item.nome).join(', ')}${lowPantry.length > 3 ? ` e mais ${lowPantry.length - 3}` : ''}`, 'home'));
+  if (nextWork) items.push(todayItem('fa-graduation-cap', 'Faculdade no radar', `${nextWork.nome} - ${relativeDate(nextWork.inicio)}`, 'work'));
+  if (pendingMeds.length) items.push(todayItem('fa-capsules', 'Medicamentos pendentes', `${pendingMeds.length} registro(s) para hoje`, 'health'));
+  if (water < 2000) items.push(todayItem('fa-droplet', 'Hidratacao', `${formatDecimal(water)} ml registrados hoje`, 'health'));
+  if (!trained) items.push(todayItem('fa-dumbbell', 'Treino', 'Nenhum treino registrado hoje', 'health'));
+  if (calories > 0) items.push(todayItem('fa-bowl-food', 'Dieta de hoje', `${formatDecimal(calories)} kcal registradas`, 'health'));
+  if (pendingShopping.length) items.push(todayItem('fa-cart-shopping', 'Compras abertas', `${pendingShopping.length} lista(s) pendente(s)`, 'home'));
+  if (Number(resumo.saldo || 0) > 0) items.push(todayItem('fa-chart-line', 'Guardar ou investir', `${formatMoney(resumo.saldo)} disponivel para decidir`, 'finance'));
+  return items.slice(0, 8);
+}
+
+function todayItem(icon, title, detail, page) {
+  return { icon, title, detail, page };
+}
+
+function renderTodayHub() {
+  const label = qs('#todayDateLabel');
+  if (label) label.textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' });
+  const container = qs('#todayList');
+  if (!container) return;
+  const items = buildTodayItems();
+  container.innerHTML = items.map(item => `
+    <button class="today-card" type="button" data-go="${escapeHtml(item.page)}">
+      <i class="fa-solid ${item.icon}"></i>
+      <span>
+        <strong>${escapeHtml(item.title)}</strong>
+        <small>${escapeHtml(item.detail)}</small>
+      </span>
+      <b><i class="fa-solid fa-arrow-right"></i></b>
+    </button>
+  `).join('') || emptyTemplate('Seu dia esta tranquilo. Alimente os dados para o LASTTRO montar sua rotina.');
+}
+
+function buildAgendaItems() {
+  const items = [];
+  (state.data.casa || [])
+    .filter(item => item.tipo === 'conta' && item.status !== 'feito' && item.vencimento)
+    .forEach(item => items.push({ date: item.vencimento, icon: 'fa-file-invoice-dollar', title: item.nome, detail: `Boleto - ${formatMoney(item.valor)}`, page: 'home' }));
+  (state.data.casa || [])
+    .filter(item => item.tipo === 'compra' && item.status !== 'feito' && item.vencimento)
+    .forEach(item => items.push({ date: item.vencimento, icon: 'fa-cart-shopping', title: item.nome, detail: 'Compra pendente', page: 'home' }));
+  (state.data.trabalhos || [])
+    .filter(item => item.status !== 'concluido' && item.inicio)
+    .forEach(item => items.push({ date: item.inicio, icon: 'fa-graduation-cap', title: item.nome, detail: `${item.tipo || 'Faculdade'}${item.disciplina ? ` - ${item.disciplina}` : ''}`, page: 'work' }));
+  (state.data.saude || [])
+    .filter(item => item.data)
+    .forEach(item => items.push({ date: item.data, icon: healthIcon(item.tipo), title: item.nome, detail: `Saude - ${healthLabel(item.tipo)}`, page: 'health' }));
+
+  return items
+    .filter(item => daysBetween(item.date) === null || daysBetween(item.date) >= -1)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+    .slice(0, 10);
+}
+
+function healthIcon(type) {
+  return {
+    alimentacao: 'fa-utensils',
+    medicamentos: 'fa-capsules',
+    hidratacao: 'fa-droplet',
+    treino: 'fa-dumbbell',
+    dieta: 'fa-bowl-food'
+  }[type] || 'fa-heart-pulse';
+}
+
+function healthLabel(type) {
+  return {
+    alimentacao: 'Alimentacao',
+    medicamentos: 'Medicamentos',
+    hidratacao: 'Hidratacao',
+    treino: 'Treino',
+    dieta: 'Dieta'
+  }[type] || 'Saude';
+}
+
+function renderAgendaHub() {
+  const container = qs('#agendaList');
+  if (!container) return;
+  const items = buildAgendaItems();
+  const count = qs('#agendaCount');
+  if (count) count.textContent = `${items.length} ${items.length === 1 ? 'item' : 'itens'}`;
+  container.innerHTML = items.map(item => `
+    <button class="agenda-item" type="button" data-go="${escapeHtml(item.page)}">
+      <i class="fa-solid ${item.icon}"></i>
+      <span>
+        <strong>${escapeHtml(item.title)}</strong>
+        <small>${escapeHtml(item.detail)}</small>
+      </span>
+      <time>${escapeHtml(relativeDate(item.date))}<small>${escapeHtml(formatDatePt(item.date))}</small></time>
+    </button>
+  `).join('') || emptyTemplate('Nenhum compromisso proximo.');
+}
+
 function buildSmartSuggestions() {
   if (!state.data) return [];
   const resumo = state.data.resumo || {};
   const suggestions = [];
   if (Number(resumo.saldo || 0) > 0) {
     suggestions.push({
+      kind: 'finance',
       icon: 'fa-chart-line',
       title: 'Que tal investir hoje?',
       text: `Voce tem ${formatMoney(resumo.saldo)} de saldo. Separar uma parte pequena ja melhora seu patrimonio.`
@@ -584,6 +792,7 @@ function buildSmartSuggestions() {
   }
   if (Number(resumo.gastos || 0) > Number(resumo.entradas || 0)) {
     suggestions.push({
+      kind: 'finance',
       icon: 'fa-triangle-exclamation',
       title: 'Gastos acima das entradas',
       text: 'Vale revisar as saidas deste mes antes de criar novas compras.'
@@ -594,6 +803,7 @@ function buildSmartSuggestions() {
     .sort((a, b) => new Date(a.inicio) - new Date(b.inicio))[0];
   if (nextWork) {
     suggestions.push({
+      kind: 'work',
       icon: 'fa-graduation-cap',
       title: 'Prazo de faculdade chegando',
       text: `${nextWork.nome} esta marcado para ${new Date(`${nextWork.inicio}T00:00:00`).toLocaleDateString('pt-BR')}.`
@@ -604,13 +814,39 @@ function buildSmartSuggestions() {
     .filter(item => Number(item.quantidade || 0) <= Number(item.minimo || 0));
   if (lowPantry.length) {
     suggestions.push({
+      kind: 'home',
       icon: 'fa-boxes-stacked',
       title: 'Despensa com estoque baixo',
       text: `${lowPantry.slice(0, 3).map(item => item.nome).join(', ')}${lowPantry.length > 3 ? ` e mais ${lowPantry.length - 3}` : ''}.`
     });
   }
+  const today = localDateKey();
+  const water = (state.data.saude || [])
+    .filter(item => item.tipo === 'hidratacao' && item.data === today)
+    .reduce((sum, item) => sum + Number(item.quantidade || 0), 0);
+  if (water < 2000) {
+    suggestions.push({
+      kind: 'health',
+      icon: 'fa-droplet',
+      title: 'Bora beber agua?',
+      text: `Hoje tem ${formatDecimal(water)} ml registrado. Sua meta pode ficar mais perto agora.`
+    });
+  }
+  const dueBill = (state.data.casa || [])
+    .filter(item => item.tipo === 'conta' && item.status !== 'feito' && item.vencimento)
+    .map(item => ({ ...item, days: daysBetween(item.vencimento) }))
+    .filter(item => item.days !== null && item.days <= 3)
+    .sort((a, b) => a.days - b.days)[0];
+  if (dueBill) {
+    suggestions.push({
+      kind: 'home',
+      icon: 'fa-file-invoice-dollar',
+      title: 'Boleto chegando',
+      text: `${dueBill.nome} vence ${relativeDate(dueBill.vencimento).toLowerCase()} no valor de ${formatMoney(dueBill.valor)}.`
+    });
+  }
   if (!suggestions.length) {
-    suggestions.push({ icon: 'fa-sparkles', title: 'Tudo organizado', text: 'Seu painel esta tranquilo hoje. Continue alimentando os dados.' });
+    suggestions.push({ kind: 'system', icon: 'fa-sparkles', title: 'Tudo organizado', text: 'Seu painel esta tranquilo hoje. Continue alimentando os dados.' });
   }
   return suggestions.slice(0, 4);
 }
@@ -618,7 +854,7 @@ function buildSmartSuggestions() {
 function renderSmartSuggestions() {
   const suggestions = buildSmartSuggestions();
   const dismissed = dismissedNotificationIds();
-  const visibleSuggestions = suggestions.filter(item => !dismissed.has(notificationId(item)));
+  const visibleSuggestions = suggestions.filter(item => notificationPrefEnabled(item.kind)).filter(item => !dismissed.has(notificationId(item)));
   const panel = qs('#smartPanel');
   const notificationAction = browserNotificationsSupported()
     ? `<button class="pill-button" type="button" data-enable-browser-notifications><i class="fa-regular fa-bell"></i><span>${Notification.permission === 'granted' ? 'Notificacoes ativas' : 'Ativar no celular'}</span></button>`
@@ -652,6 +888,15 @@ function renderSmartSuggestions() {
           <button class="mini-dismiss" type="button" data-dismiss-notification="${escapeHtml(notificationId(item))}" aria-label="Apagar notificacao"><i class="fa-solid fa-xmark"></i></button>
         </article>
       `).join('') || emptyTemplate('Nenhuma notificacao ativa agora.')}
+      <div class="notification-settings">
+        <strong>Receber avisos</strong>
+        ${notificationOptions.map(option => `
+          <label>
+            <input type="checkbox" data-notification-pref="${option.key}" ${notificationPrefEnabled(option.key) ? 'checked' : ''}>
+            <span><i class="fa-solid ${option.icon}"></i>${option.label}</span>
+          </label>
+        `).join('')}
+      </div>
       <div class="notification-actions">${notificationAction}</div>
     `;
   }
@@ -660,6 +905,29 @@ function renderSmartSuggestions() {
 
 function notificationStorageKey(name) {
   return `${name}:${state.user?.email || state.user?.username || 'local'}`;
+}
+
+function notificationPrefs() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(notificationStorageKey('lasttroNotificationPrefs')) || '{}');
+    return notificationOptions.reduce((acc, option) => {
+      acc[option.key] = saved[option.key] !== false;
+      return acc;
+    }, {});
+  } catch {
+    return notificationOptions.reduce((acc, option) => ({ ...acc, [option.key]: true }), {});
+  }
+}
+
+function notificationPrefEnabled(kind = 'system') {
+  return notificationPrefs()[kind] !== false;
+}
+
+function setNotificationPref(kind, enabled) {
+  const prefs = notificationPrefs();
+  prefs[kind] = enabled;
+  localStorage.setItem(notificationStorageKey('lasttroNotificationPrefs'), JSON.stringify(prefs));
+  renderSmartSuggestions();
 }
 
 function notificationId(item) {
@@ -3058,6 +3326,9 @@ function bindEvents() {
   qs('#settingsChangePasswordButton')?.addEventListener('click', openPasswordSettings);
   qs('#profilePhotoInput')?.addEventListener('change', changeProfilePhoto);
   qs('#removeProfilePhotoButton')?.addEventListener('click', removeProfilePhoto);
+  qs('#exportBackupButton')?.addEventListener('click', exportBackup);
+  qs('#importBackupButton')?.addEventListener('click', requestBackupImport);
+  qs('#backupFileInput')?.addEventListener('change', importBackup);
   qs('#connectGmailButton')?.addEventListener('click', connectGmail);
   qs('#refreshGmailButton')?.addEventListener('click', refreshGmail);
   qs('#sendGmailButton')?.addEventListener('click', sendGmail);
@@ -3304,6 +3575,12 @@ function bindEvents() {
   });
 
   document.body.addEventListener('change', event => {
+    const notificationPref = event.target.closest('[data-notification-pref]');
+    if (notificationPref) {
+      setNotificationPref(notificationPref.dataset.notificationPref, notificationPref.checked);
+      return;
+    }
+
     const pantryItem = event.target.closest('[data-add-pantry-shopping]');
     if (pantryItem) {
       togglePantryShopping(pantryItem.dataset.addPantryShopping, pantryItem.checked);

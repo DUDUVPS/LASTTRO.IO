@@ -33,6 +33,12 @@
       "icons": [{ "src": "/assets/app-icon-192.png", "sizes": "192x192" }]
     },
     {
+      "name": "Ver rotina de hoje",
+      "short_name": "Hoje",
+      "url": "/app?atalho=hoje",
+      "icons": [{ "src": "/assets/app-icon-192.png", "sizes": "192x192" }]
+    },
+    {
       "name": "Registrar movimentacao",
       "short_name": "Movimentacao",
       "url": "/app?atalho=movimentacao",
