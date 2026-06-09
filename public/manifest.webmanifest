@@ -1,0 +1,42 @@
+{
+  "name": "LASTTRO - Gestao pessoal",
+  "short_name": "LASTTRO",
+  "description": "Sistema pessoal para controlar financeiro, metas, faculdade, casa, saude e email.",
+  "id": "/app",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0d0b",
+  "theme_color": "#7c3aed",
+  "categories": ["productivity", "finance", "lifestyle"],
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/assets/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Abrir financeiro",
+      "short_name": "Financeiro",
+      "url": "/app?atalho=financeiro",
+      "icons": [{ "src": "/assets/app-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Registrar movimentacao",
+      "short_name": "Movimentacao",
+      "url": "/app?atalho=movimentacao",
+      "icons": [{ "src": "/assets/app-icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
