@@ -856,7 +856,6 @@ function renderSmartSuggestions() {
     const first = visibleSuggestions[0] || suggestions[0];
     panel.innerHTML = `
       <div>
-        <span>LASTTRO recomenda</span>
         <strong>${escapeHtml(first.title)}</strong>
         <small>${escapeHtml(first.text)}</small>
       </div>
