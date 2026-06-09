@@ -73,6 +73,7 @@ const pantryEssentialGroups = [
   }
 ];
 const pantryEssentials = pantryEssentialGroups.flatMap(group => group.items);
+const NOTIFICATION_INTERVAL_MS = 2 * 60 * 60 * 1000;
 const money = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',
@@ -616,35 +617,79 @@ function buildSmartSuggestions() {
 
 function renderSmartSuggestions() {
   const suggestions = buildSmartSuggestions();
+  const dismissed = dismissedNotificationIds();
+  const visibleSuggestions = suggestions.filter(item => !dismissed.has(notificationId(item)));
   const panel = qs('#smartPanel');
   const notificationAction = browserNotificationsSupported()
-    ? `<button class="pill-button" type="button" data-enable-browser-notifications><i class="fa-regular fa-bell"></i><span>${Notification.permission === 'granted' ? 'Testar no celular' : 'Ativar no celular'}</span></button>`
+    ? `<button class="pill-button" type="button" data-enable-browser-notifications><i class="fa-regular fa-bell"></i><span>${Notification.permission === 'granted' ? 'Notificacoes ativas' : 'Ativar no celular'}</span></button>`
     : '<small>Notificacoes do sistema indisponiveis neste navegador.</small>';
   if (panel) {
+    const first = visibleSuggestions[0] || suggestions[0];
     panel.innerHTML = `
       <div>
         <span>LASTTRO recomenda</span>
-        <strong>${escapeHtml(suggestions[0].title)}</strong>
-        <small>${escapeHtml(suggestions[0].text)}</small>
+        <strong>${escapeHtml(first.title)}</strong>
+        <small>${escapeHtml(first.text)}</small>
       </div>
       <button class="pill-button" type="button" data-go="finance"><i class="fa-solid fa-arrow-right"></i><span>Ver financeiro</span></button>
     `;
   }
-  qs('#notificationCount').textContent = String(suggestions.length);
+  qs('#notificationCount').textContent = String(visibleSuggestions.length);
   const popout = qs('#notificationPopout');
   if (popout) {
     popout.innerHTML = `
-      <div class="notification-head"><strong>Notificacoes</strong><button class="icon-button" id="closeNotifications" type="button"><i class="fa-solid fa-xmark"></i></button></div>
-      ${suggestions.map(item => `
+      <div class="notification-head">
+        <strong>Notificacoes</strong>
+        <span>
+          ${visibleSuggestions.length ? '<button class="ghost-action" type="button" data-clear-notifications>Limpar</button>' : ''}
+          <button class="icon-button" id="closeNotifications" type="button"><i class="fa-solid fa-xmark"></i></button>
+        </span>
+      </div>
+      ${visibleSuggestions.map(item => `
         <article>
           <i class="fa-solid ${item.icon}"></i>
           <span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.text)}</small></span>
+          <button class="mini-dismiss" type="button" data-dismiss-notification="${escapeHtml(notificationId(item))}" aria-label="Apagar notificacao"><i class="fa-solid fa-xmark"></i></button>
         </article>
-      `).join('')}
+      `).join('') || emptyTemplate('Nenhuma notificacao ativa agora.')}
       <div class="notification-actions">${notificationAction}</div>
     `;
   }
-  maybeNotifySmartSuggestion(suggestions);
+  maybeNotifySmartSuggestion(visibleSuggestions);
+}
+
+function notificationStorageKey(name) {
+  return `${name}:${state.user?.email || state.user?.username || 'local'}`;
+}
+
+function notificationId(item) {
+  return encodeURIComponent(`${item.title}|${item.text}`.toLowerCase()).slice(0, 180);
+}
+
+function dismissedNotificationIds() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(notificationStorageKey('lasttroDismissedNotifications')) || '[]'));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveDismissedNotificationIds(ids) {
+  localStorage.setItem(notificationStorageKey('lasttroDismissedNotifications'), JSON.stringify([...ids].slice(-60)));
+}
+
+function dismissNotification(id) {
+  const ids = dismissedNotificationIds();
+  ids.add(id);
+  saveDismissedNotificationIds(ids);
+  renderSmartSuggestions();
+}
+
+function clearVisibleNotifications() {
+  const ids = dismissedNotificationIds();
+  buildSmartSuggestions().forEach(item => ids.add(notificationId(item)));
+  saveDismissedNotificationIds(ids);
+  renderSmartSuggestions();
 }
 
 function showToast(title, text) {
@@ -720,11 +765,11 @@ async function enableBrowserNotifications() {
   }
   localStorage.setItem('lasttroNotificationsEnabled', 'true');
   const first = buildSmartSuggestions()[0] || { title: 'LASTTRO', text: 'Notificacoes ativadas.' };
-  const today = new Date().toISOString().slice(0, 10);
-  localStorage.setItem('lasttroLastSmartNotification', `${today}:${first.title}`);
+  localStorage.setItem(notificationStorageKey('lasttroLastSmartNotificationKey'), notificationId(first));
+  localStorage.setItem(notificationStorageKey('lasttroLastSmartNotificationAt'), String(Date.now()));
   const push = await subscribePushNotifications().catch(error => ({ subscribed: false, reason: safeApiError(error.message) || error.message }));
   if (push.subscribed) {
-    await api('/api/push/test', { method: 'POST' }).catch(() => sendBrowserNotification(first.title, first.text));
+    await api('/api/push/smart', { method: 'POST', body: JSON.stringify({ force: true }) }).catch(() => sendBrowserNotification(first.title, first.text));
     showToast('Notificacoes ativas', 'Seu celular ficou inscrito para receber avisos do LASTTRO.');
   } else {
     await sendBrowserNotification(first.title, first.text);
@@ -739,13 +784,23 @@ function maybeNotifySmartSuggestion(suggestions) {
   if (localStorage.getItem('lasttroNotificationsEnabled') !== 'true') return;
   const first = suggestions[0];
   if (!first) return;
-  const today = new Date().toISOString().slice(0, 10);
-  const key = `${today}:${first.title}`;
-  if (localStorage.getItem('lasttroLastSmartNotification') === key) return;
-  localStorage.setItem('lasttroLastSmartNotification', key);
-  sendBrowserNotification(first.title, first.text).catch(() => {
-    localStorage.removeItem('lasttroLastSmartNotification');
-  });
+  const key = notificationId(first);
+  const lastKey = localStorage.getItem(notificationStorageKey('lasttroLastSmartNotificationKey'));
+  const lastAt = Number(localStorage.getItem(notificationStorageKey('lasttroLastSmartNotificationAt')) || 0);
+  if (lastKey === key && Date.now() - lastAt < NOTIFICATION_INTERVAL_MS) return;
+  localStorage.setItem(notificationStorageKey('lasttroLastSmartNotificationKey'), key);
+  localStorage.setItem(notificationStorageKey('lasttroLastSmartNotificationAt'), String(Date.now()));
+  api('/api/push/smart', { method: 'POST', body: JSON.stringify({ force: false }) })
+    .then(result => {
+      if (result.skipped) return null;
+      if (!result.sent) return sendBrowserNotification(first.title, first.text);
+      return null;
+    })
+    .catch(() => sendBrowserNotification(first.title, first.text))
+    .catch(() => {
+      localStorage.removeItem(notificationStorageKey('lasttroLastSmartNotificationKey'));
+      localStorage.removeItem(notificationStorageKey('lasttroLastSmartNotificationAt'));
+    });
 }
 
 function renderMonthlyStatements() {
@@ -3125,6 +3180,17 @@ function bindEvents() {
     const notificationEnableButton = event.target.closest('[data-enable-browser-notifications]');
     if (notificationEnableButton) {
       enableBrowserNotifications();
+      return;
+    }
+
+    const dismissNotificationButton = event.target.closest('[data-dismiss-notification]');
+    if (dismissNotificationButton) {
+      dismissNotification(dismissNotificationButton.dataset.dismissNotification);
+      return;
+    }
+
+    if (event.target.closest('[data-clear-notifications]')) {
+      clearVisibleNotifications();
       return;
     }
 

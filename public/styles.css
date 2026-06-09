@@ -2551,8 +2551,17 @@ button { border: 0; cursor: pointer; }
   border-bottom: 1px solid var(--line);
 }
 
+.notification-head span,
+.notification-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .notification-popout article {
+  position: relative;
   padding: 10px;
+  padding-right: 38px;
   border-radius: 8px;
   background: rgba(255,255,255,.03);
 }
@@ -2570,6 +2579,31 @@ button { border: 0; cursor: pointer; }
 .notification-popout small {
   color: var(--muted);
   line-height: 1.4;
+}
+
+.ghost-action {
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 800;
+  background: transparent;
+}
+
+.mini-dismiss {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--muted);
+  background: rgba(255,255,255,.04);
+}
+
+.mini-dismiss:hover {
+  color: var(--text);
+  background: rgba(168,85,247,.16);
 }
 
 .toast-stack {

@@ -244,7 +244,9 @@ function normalizeUser(user = {}) {
     passwordHash: user.passwordHash || '',
     avatar: typeof user.avatar === 'string' ? user.avatar : '',
     gmail: user.gmail && typeof user.gmail === 'object' ? user.gmail : null,
-    pushSubscriptions: Array.isArray(user.pushSubscriptions) ? user.pushSubscriptions : []
+    pushSubscriptions: Array.isArray(user.pushSubscriptions) ? user.pushSubscriptions : [],
+    lastPushSentAt: Number(user.lastPushSentAt || 0),
+    lastPushTitle: String(user.lastPushTitle || '')
   };
 }
 
@@ -931,6 +933,28 @@ async function handleApi(req, res, pathname) {
     }
     const alert = buildPushAlerts(data)[0];
     const result = await sendPushToUser(currentUser, alert);
+    await writeDb(db);
+    return send(res, 200, { ok: true, alert, ...result });
+  }
+
+  if (req.method === 'POST' && pathname === '/api/push/smart') {
+    if (!currentUser) return send(res, 404, { error: 'Usuario nao encontrado' });
+    if (!PUSH_ENABLED) {
+      return send(res, 503, { error: 'Push real ainda nao configurado no servidor' });
+    }
+    const body = await readBody(req);
+    const alert = buildPushAlerts(data)[0];
+    const interval = 2 * 60 * 60 * 1000;
+    const now = Date.now();
+    const alreadySent = currentUser.lastPushTitle === alert.title && now - Number(currentUser.lastPushSentAt || 0) < interval;
+    if (!body.force && alreadySent) {
+      return send(res, 200, { ok: true, skipped: true, alert, sent: 0 });
+    }
+    const result = await sendPushToUser(currentUser, alert);
+    if (result.sent > 0) {
+      currentUser.lastPushSentAt = now;
+      currentUser.lastPushTitle = alert.title;
+    }
     await writeDb(db);
     return send(res, 200, { ok: true, alert, ...result });
   }
