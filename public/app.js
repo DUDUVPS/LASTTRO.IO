@@ -542,7 +542,6 @@ function renderSummary() {
 
 function renderOverview() {
   const { transacoes, metas, trabalhos, resumo, investimentosCarteira } = state.data;
-  renderTodayHub();
   renderAgendaHub();
   renderCategoryChart(resumo.porCategoria);
   renderOverviewInvestmentChart(investimentosCarteira);
@@ -653,63 +652,6 @@ function renderFinance() {
   qs('#transactionsTotal').textContent = formatMoney(total);
   list.innerHTML = filtered.map(transactionCardTemplate).join('') || emptyTemplate('Nenhuma transacao nesta categoria.');
   renderMonthlyStatements();
-}
-
-function buildTodayItems() {
-  const today = localDateKey();
-  const items = [];
-  const resumo = state.data.resumo || {};
-  const dueBills = (state.data.casa || [])
-    .filter(item => item.tipo === 'conta' && item.status !== 'feito' && item.vencimento)
-    .map(item => ({ ...item, days: daysBetween(item.vencimento) }))
-    .filter(item => item.days !== null && item.days <= 3)
-    .sort((a, b) => a.days - b.days);
-  const lowPantry = (state.data.casa || [])
-    .filter(item => item.tipo === 'despensa' && Number(item.quantidade || 0) <= Number(item.minimo || 0));
-  const nextWork = (state.data.trabalhos || [])
-    .filter(item => item.status !== 'concluido' && item.inicio)
-    .map(item => ({ ...item, days: daysBetween(item.inicio) }))
-    .filter(item => item.days !== null && item.days <= 7)
-    .sort((a, b) => a.days - b.days)[0];
-  const todayHealth = (state.data.saude || []).filter(item => item.data === today);
-  const water = todayHealth.filter(item => item.tipo === 'hidratacao').reduce((sum, item) => sum + Number(item.quantidade || 0), 0);
-  const calories = todayHealth.filter(item => item.tipo === 'dieta' || item.tipo === 'alimentacao').reduce((sum, item) => sum + Number(item.calorias || 0), 0);
-  const trained = todayHealth.some(item => item.tipo === 'treino');
-  const pendingMeds = todayHealth.filter(item => item.tipo === 'medicamentos' && item.status !== 'feito');
-  const pendingShopping = (state.data.casa || []).filter(item => item.tipo === 'compra' && item.status !== 'feito');
-
-  if (dueBills.length) items.push(todayItem('fa-file-invoice-dollar', 'Boleto para resolver', `${dueBills[0].nome} - ${relativeDate(dueBills[0].vencimento)} - ${formatMoney(dueBills[0].valor)}`, 'home'));
-  if (lowPantry.length) items.push(todayItem('fa-boxes-stacked', 'Despensa baixa', `${lowPantry.slice(0, 3).map(item => item.nome).join(', ')}${lowPantry.length > 3 ? ` e mais ${lowPantry.length - 3}` : ''}`, 'home'));
-  if (nextWork) items.push(todayItem('fa-graduation-cap', 'Faculdade no radar', `${nextWork.nome} - ${relativeDate(nextWork.inicio)}`, 'work'));
-  if (pendingMeds.length) items.push(todayItem('fa-capsules', 'Medicamentos pendentes', `${pendingMeds.length} registro(s) para hoje`, 'health'));
-  if (water < 2000) items.push(todayItem('fa-droplet', 'Hidratacao', `${formatDecimal(water)} ml registrados hoje`, 'health'));
-  if (!trained) items.push(todayItem('fa-dumbbell', 'Treino', 'Nenhum treino registrado hoje', 'health'));
-  if (calories > 0) items.push(todayItem('fa-bowl-food', 'Dieta de hoje', `${formatDecimal(calories)} kcal registradas`, 'health'));
-  if (pendingShopping.length) items.push(todayItem('fa-cart-shopping', 'Compras abertas', `${pendingShopping.length} lista(s) pendente(s)`, 'home'));
-  if (Number(resumo.saldo || 0) > 0) items.push(todayItem('fa-chart-line', 'Guardar ou investir', `${formatMoney(resumo.saldo)} disponivel para decidir`, 'finance'));
-  return items.slice(0, 8);
-}
-
-function todayItem(icon, title, detail, page) {
-  return { icon, title, detail, page };
-}
-
-function renderTodayHub() {
-  const label = qs('#todayDateLabel');
-  if (label) label.textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' });
-  const container = qs('#todayList');
-  if (!container) return;
-  const items = buildTodayItems();
-  container.innerHTML = items.map(item => `
-    <button class="today-card" type="button" data-go="${escapeHtml(item.page)}">
-      <i class="fa-solid ${item.icon}"></i>
-      <span>
-        <strong>${escapeHtml(item.title)}</strong>
-        <small>${escapeHtml(item.detail)}</small>
-      </span>
-      <b><i class="fa-solid fa-arrow-right"></i></b>
-    </button>
-  `).join('') || emptyTemplate('Seu dia esta tranquilo. Alimente os dados para o LASTTRO montar sua rotina.');
 }
 
 function buildAgendaItems() {

@@ -471,14 +471,6 @@ button { border: 0; cursor: pointer; }
   color: var(--muted);
 }
 
-.today-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr);
-  gap: 14px;
-  margin-bottom: 16px;
-}
-
-.today-panel,
 .agenda-panel {
   display: grid;
   align-content: start;
@@ -489,13 +481,15 @@ button { border: 0; cursor: pointer; }
   background: linear-gradient(135deg, rgba(168,85,247,.08), rgba(74,158,255,.04)), var(--panel);
 }
 
-.today-list,
+.overview-agenda {
+  margin-bottom: 16px;
+}
+
 .agenda-list {
   display: grid;
   gap: 10px;
 }
 
-.today-card,
 .agenda-item {
   width: 100%;
   min-width: 0;
@@ -510,16 +504,13 @@ button { border: 0; cursor: pointer; }
   background: rgba(0,0,0,.16);
 }
 
-.today-card { grid-template-columns: 38px minmax(0, 1fr) auto; }
 .agenda-item { grid-template-columns: 38px minmax(0, 1fr) minmax(82px, auto); }
 
-.today-card:hover,
 .agenda-item:hover {
   border-color: rgba(168,85,247,.34);
   background: rgba(168,85,247,.08);
 }
 
-.today-card > i,
 .agenda-item > i {
   width: 38px;
   height: 38px;
@@ -530,21 +521,18 @@ button { border: 0; cursor: pointer; }
   background: rgba(168,85,247,.13);
 }
 
-.today-card span,
 .agenda-item span {
   min-width: 0;
   display: grid;
   gap: 4px;
 }
 
-.today-card strong,
 .agenda-item strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.today-card small,
 .agenda-item small,
 .agenda-item time {
   color: var(--muted);
@@ -557,8 +545,6 @@ button { border: 0; cursor: pointer; }
   gap: 3px;
   white-space: nowrap;
 }
-
-.today-card b { color: var(--blue); }
 
 .cashflow, .panel, .metric-card, .list-card {
   background: var(--panel);
@@ -3361,7 +3347,7 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
   .main { min-height: 100vh; }
   .menu-button { display: inline-flex !important; }
   .content { padding: 16px; }
-  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .health-overview, .health-edit-grid, .health-edit-grid.three, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .study-overview, .study-subject-list, .study-edit-grid, .home-overview, .home-board, .home-edit-grid, .home-edit-grid.three, .bill-summary-grid, .pantry-essentials-head, .pantry-essential-grid, .email-grid, .report-grid, .today-grid { grid-template-columns: 1fr; }
+  .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .health-overview, .health-edit-grid, .health-edit-grid.three, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .study-overview, .study-subject-list, .study-edit-grid, .home-overview, .home-board, .home-edit-grid, .home-edit-grid.three, .bill-summary-grid, .pantry-essentials-head, .pantry-essential-grid, .email-grid, .report-grid { grid-template-columns: 1fr; }
   .statement-grid,
   .transaction-edit-grid,
   .goal-edit-grid,
