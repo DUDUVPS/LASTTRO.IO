@@ -3,136 +3,221 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#7c3aed">
+  <meta name="theme-color" content="#050816">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="LASTTRO">
+  <meta name="apple-mobile-web-app-title" content="Lasttro Systems">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>LASTTRO | Apresentacao</title>
+  <title>Lasttro Systems | Gestao Pessoal</title>
+  <meta name="description" content="Lasttro Gestao Pessoal centraliza financeiro, saude, trabalho, faculdade, documentos e rotina em um so sistema.">
   <link rel="icon" href="/assets/favicon-32.png?v=4" type="image/png" sizes="32x32">
   <link rel="shortcut icon" href="/favicon.ico?v=4" type="image/x-icon">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/assets/app-icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="/presentation.css">
 </head>
 <body>
-  <main class="presentation-shell">
-    <header class="presentation-nav">
-      <a class="brand" href="/" aria-label="LASTTRO">
-        <img src="/assets/logo-nome.png?v=4" alt="LASTTRO">
+  <div class="site-shell">
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Lasttro Systems">
+        <span class="brand-mark">LS</span>
+        <span>
+          <strong>Lasttro Systems</strong>
+          <small>ecossistema de sistemas</small>
+        </span>
       </a>
-      <nav>
-        <a href="#vida">Vida</a>
-        <a href="#modulos">Modulos</a>
-        <a href="#banco">Lastro Bank</a>
+      <nav class="desktop-nav" aria-label="Navegacao principal">
+        <a href="#servicos">Servicos</a>
+        <a href="#funcionalidades">Funcionalidades</a>
+        <a href="#planos">Planos</a>
+        <a href="#sobre">Sobre</a>
       </nav>
-      <a class="nav-action" href="/app">Fazer login</a>
+      <div class="header-actions">
+        <a class="ghost-link" href="/app">Acessar sistema</a>
+        <a class="primary-link small" href="mailto:contato@lasttro.app.br?subject=Agendar%20demo%20Lasttro%20Systems">Agendar demo</a>
+      </div>
     </header>
 
-    <section class="hero">
-      <div class="hero-copy">
-        <span class="eyebrow">um sistema para controlar sua vida inteira</span>
-        <h1>LASTTRO</h1>
-        <p>Dinheiro, metas, faculdade, planos, anotacoes e proximos passos em um painel feito para voce nao perder o controle do que importa.</p>
-        <div class="hero-actions">
-          <a class="primary-link" href="/app">Fazer login</a>
-          <a class="secondary-link" href="#modulos">Ver modulos</a>
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <span class="eyebrow">Lasttro Systems &gt; Lasttro Gestao Pessoal</span>
+          <h1>Gerencie sua vida com inteligencia, em um so sistema.</h1>
+          <p>O Lasttro Gestao Pessoal centraliza financeiro, saude, trabalho, faculdade, documentos e rotina para voce ter mais controle, organizacao e tempo para o que importa.</p>
+          <div class="hero-actions">
+            <a class="primary-link" href="mailto:contato@lasttro.app.br?subject=Agendar%20demonstracao%20Lasttro%20Gestao%20Pessoal">Agendar demonstracao</a>
+            <a class="secondary-link" href="#funcionalidades">Conhecer funcionalidades</a>
+          </div>
+          <div class="hero-proof">
+            <span><i class="fa-solid fa-shield-halved"></i> Dados organizados por conta</span>
+            <span><i class="fa-solid fa-mobile-screen"></i> Experiencia web e PWA</span>
+          </div>
         </div>
-      </div>
-      <div class="hero-product" aria-label="Resumo visual do sistema LASTTRO">
-        <div class="mock-top">
-          <span></span><span></span><span></span>
-        </div>
-        <div class="mock-grid">
-          <article>
-            <small>Saldo</small>
-            <strong>R$ 0,00</strong>
-          </article>
-          <article>
-            <small>Patrimonio</small>
-            <strong>R$ 0,00</strong>
-          </article>
-          <article class="wide">
-            <small>Saidas e investimentos</small>
-            <div class="rings">
-              <span></span>
-              <span></span>
+
+        <div class="product-mockup" aria-label="Mockup do dashboard Lasttro Gestao Pessoal">
+          <div class="mock-glow"></div>
+          <div class="mock-window">
+            <div class="mock-topbar">
+              <span></span><span></span><span></span>
+              <b>Lasttro Gestao Pessoal</b>
             </div>
+            <div class="mock-hero-card">
+              <small>visao integrada</small>
+              <strong>Controle total em tempo real</strong>
+              <div class="mock-line"><span></span></div>
+            </div>
+            <div class="mock-grid">
+              <article><i class="fa-solid fa-wallet"></i><strong>Financeiro</strong><span>saldo, gastos e metas</span></article>
+              <article><i class="fa-solid fa-heart-pulse"></i><strong>Saude</strong><span>habitos e bem-estar</span></article>
+              <article><i class="fa-solid fa-briefcase"></i><strong>Trabalho</strong><span>tarefas e prazos</span></article>
+              <article><i class="fa-solid fa-graduation-cap"></i><strong>Faculdade</strong><span>materias e provas</span></article>
+              <article><i class="fa-solid fa-folder-open"></i><strong>Documentos</strong><span>arquivos importantes</span></article>
+              <article><i class="fa-solid fa-bullseye"></i><strong>Rotina &amp; Metas</strong><span>evolucao diaria</span></article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section split-section" id="servicos">
+        <div class="section-copy">
+          <span class="eyebrow">Servicos e produtos</span>
+          <h2>Um ecossistema Lasttro para tudo que importa</h2>
+          <p>A Lasttro Systems conecta solucoes inteligentes para diferentes areas da sua vida. O primeiro servico em destaque e o Lasttro Gestao Pessoal.</p>
+        </div>
+        <div class="services-grid">
+          <article class="service-card featured">
+            <span class="status active">Em destaque</span>
+            <h3>Lasttro Gestao Pessoal</h3>
+            <p>Organize sua vida pessoal em modulos conectados: dinheiro, saude, estudos, trabalho, documentos e metas.</p>
+            <a href="#funcionalidades">Explorar modulos <i class="fa-solid fa-arrow-right"></i></a>
           </article>
-          <article class="wide">
-            <small>Faculdade</small>
-            <ul>
-              <li>Financeiro</li>
-              <li>Metas</li>
-              <li>Faculdade</li>
-              <li>Rotina</li>
-            </ul>
+          <article class="service-card">
+            <span class="status">Em breve</span>
+            <h3>Lasttro Financeiro</h3>
+          </article>
+          <article class="service-card">
+            <span class="status">Em breve</span>
+            <h3>Lasttro Saude</h3>
+          </article>
+          <article class="service-card">
+            <span class="status">Em breve</span>
+            <h3>Lasttro Academico</h3>
           </article>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="section" id="vida">
-      <div class="section-title">
-        <span>visao central</span>
-        <h2>A ideia principal e controlar tudo da sua vida, em um lugar so.</h2>
-      </div>
-      <div class="life-grid">
-        <article><strong>Dinheiro</strong><span>saldo, contas, credito, investimentos e Lastro Bank</span></article>
-        <article><strong>Objetivos</strong><span>metas, progresso e valores planejados</span></article>
-        <article><strong>Faculdade</strong><span>provas, trabalhos e anotacoes por materia</span></article>
-        <article><strong>Rotina</strong><span>o proximo espaco para habitos, agenda e prioridades</span></article>
-        <article><strong>Projetos</strong><span>controle de ideias, entregas e evolucao pessoal</span></article>
-        <article><strong>Historico</strong><span>tudo registrado para voce comparar e melhorar</span></article>
-      </div>
-    </section>
+      <section class="section" id="funcionalidades">
+        <div class="section-head">
+          <span class="eyebrow">Funcionalidades</span>
+          <h2>Tudo que voce precisa em um so lugar</h2>
+        </div>
+        <div class="feature-grid">
+          <article><i class="fa-solid fa-wallet"></i><h3>Financeiro</h3><p>Controle receitas, gastos, contas, metas e tenha clareza do seu dinheiro.</p></article>
+          <article><i class="fa-solid fa-heart-pulse"></i><h3>Saude</h3><p>Acompanhe consultas, medicamentos, exames, habitos e bem-estar.</p></article>
+          <article><i class="fa-solid fa-briefcase"></i><h3>Trabalho</h3><p>Organize tarefas, projetos, prazos e compromissos profissionais.</p></article>
+          <article><i class="fa-solid fa-graduation-cap"></i><h3>Faculdade</h3><p>Gerencie materias, provas, trabalhos, notas e prazos academicos.</p></article>
+          <article><i class="fa-solid fa-folder-open"></i><h3>Documentos</h3><p>Guarde e organize arquivos importantes com seguranca.</p></article>
+          <article><i class="fa-solid fa-bullseye"></i><h3>Rotina &amp; Metas</h3><p>Crie habitos, acompanhe metas e evolua todos os dias.</p></article>
+        </div>
+      </section>
 
-    <section class="section" id="modulos">
-      <div class="section-title">
-        <span>modulos atuais</span>
-        <h2>O LASTTRO comeca com as areas que voce mais usa hoje e cresce com voce.</h2>
-      </div>
-      <div class="module-grid">
-        <article>
-          <i>01</i>
-          <h3>Financeiro</h3>
-          <p>Contas, credito, movimentacoes, investimentos e Lastro Bank em uma area unica.</p>
-        </article>
-        <article>
-          <i>02</i>
-          <h3>Metas</h3>
-          <p>Acompanhe objetivos, valores planejados, progresso e conclusoes.</p>
-        </article>
-        <article>
-          <i>03</i>
-          <h3>Faculdade</h3>
-          <p>Separe provas, trabalhos e anotacoes por materia, prazo e status.</p>
-        </article>
-      </div>
-    </section>
+      <section class="section process-section" id="sobre">
+        <div class="section-head">
+          <span class="eyebrow">Como funciona</span>
+          <h2>Do cadastro ao controle completo da rotina</h2>
+        </div>
+        <div class="process-grid">
+          <article><span>01</span><h3>Crie sua conta</h3><p>Comece com um acesso simples e seguro.</p></article>
+          <article><span>02</span><h3>Personalize seus modulos</h3><p>Use as areas que fazem sentido para sua vida.</p></article>
+          <article><span>03</span><h3>Centralize sua rotina</h3><p>Reuna compromissos, informacoes e registros em um so lugar.</p></article>
+          <article><span>04</span><h3>Acompanhe sua evolucao</h3><p>Veja dados, progresso e proximos passos com clareza.</p></article>
+        </div>
+      </section>
 
-    <section class="feature-band" id="banco">
+      <section class="section benefits-section">
+        <div class="section-head">
+          <span class="eyebrow">Beneficios</span>
+          <h2>Por que usar o Lasttro Gestao Pessoal?</h2>
+        </div>
+        <div class="benefits-grid">
+          <article>Centralizacao total</article>
+          <article>Mais organizacao no dia a dia</article>
+          <article>Visao completa da sua vida</article>
+          <article>Decisoes melhores com dados</article>
+          <article>Seguranca e privacidade</article>
+          <article>Experiencia simples e moderna</article>
+        </div>
+      </section>
+
+      <section class="section plans-section" id="planos">
+        <div>
+          <span class="eyebrow">Planos</span>
+          <h2>Comece pelo Lasttro Gestao Pessoal</h2>
+          <p>Os planos serao estruturados para quem quer organizar a vida pessoal com uma experiencia completa, segura e moderna.</p>
+        </div>
+        <a class="primary-link" href="mailto:contato@lasttro.app.br?subject=Agendar%20demo%20Lasttro%20Systems">Agendar demo</a>
+      </section>
+
+      <section class="section faq-section">
+        <div class="section-head">
+          <span class="eyebrow">FAQ</span>
+          <h2>Perguntas frequentes</h2>
+        </div>
+        <div class="faq-list">
+          <details open>
+            <summary>O que e o Lasttro Gestao Pessoal?</summary>
+            <p>Um sistema para centralizar areas importantes da vida, como financeiro, saude, trabalho, faculdade, documentos, rotina e metas.</p>
+          </details>
+          <details>
+            <summary>Posso acessar em outros dispositivos?</summary>
+            <p>Sim. O sistema e web e pode ser acessado pelo navegador. Tambem pode ser instalado como PWA em dispositivos compativeis.</p>
+          </details>
+          <details>
+            <summary>Meus dados estao seguros?</summary>
+            <p>Os dados ficam vinculados a sua conta e sao salvos no banco do sistema. O acesso exige autenticacao.</p>
+          </details>
+          <details>
+            <summary>Posso personalizar os modulos?</summary>
+            <p>A proposta do Lasttro e permitir que voce organize a experiencia de acordo com sua rotina e prioridades.</p>
+          </details>
+          <details>
+            <summary>O sistema funciona offline?</summary>
+            <p>O app possui suporte PWA e pagina offline. Para sincronizar e salvar dados no servidor, a conexao com internet e necessaria.</p>
+          </details>
+          <details>
+            <summary>Como meus dados sao tratados?</summary>
+            <p>Os dados sao usados para alimentar os modulos do sistema e gerar organizacao, historico e visoes do proprio usuario.</p>
+          </details>
+        </div>
+      </section>
+
+      <section class="final-cta">
+        <span class="eyebrow">Lasttro Systems</span>
+        <h2>Centralize sua vida com o Lasttro Systems.</h2>
+        <p>Mais organizacao, equilibrio e resultado para voce.</p>
+        <a class="primary-link" href="mailto:contato@lasttro.app.br?subject=Agendar%20demonstracao%20Lasttro%20Systems">Agendar demonstracao</a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
       <div>
-        <span>Lastro Bank</span>
-        <h2>Seu dinheiro com incentivo para guardar mais e usar melhor.</h2>
-        <p>Guarde dinheiro, retire quando precisar e acompanhe a devolucao com incentivo de 4% por valor retirado.</p>
+        <strong>Lasttro Systems</strong>
+        <p>Plataforma inteligente que centraliza e organiza o que realmente importa na sua vida.</p>
       </div>
-      <div class="bank-preview">
-        <strong>Lastro Bank</strong>
-        <small>saldo guardado</small>
-        <b>R$ 0,00</b>
-        <div class="bank-line"><span></span></div>
-      </div>
-    </section>
-
-    <footer class="presentation-footer">
-      <span>&copy; 2026 LASTTRO - Todos os direitos reservados</span>
+      <nav>
+        <a href="#servicos">Servicos</a>
+        <a href="#funcionalidades">Funcionalidades</a>
+        <a href="#sobre">Sobre</a>
+        <a href="mailto:contato@lasttro.app.br">Suporte</a>
+      </nav>
+      <span>&copy; 2026 Lasttro Systems. Todos os direitos reservados.</span>
     </footer>
-  </main>
+  </div>
+
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
