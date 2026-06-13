@@ -1136,11 +1136,18 @@ async function handleApi(req, res, pathname) {
 }
 
 async function serveStatic(req, res, pathname) {
+  const pageRoutes = {
+    '/servicos': '/servicos.html',
+    '/funcionalidades': '/funcionalidades.html',
+    '/planos': '/planos.html',
+    '/sobre': '/sobre.html',
+    '/suporte': '/suporte.html'
+  };
   const requested = pathname === '/' || pathname === '/apresentacao'
     ? '/apresentacao.html'
     : pathname === '/app'
       ? '/index.html'
-      : pathname;
+      : pageRoutes[pathname] || pathname;
   const filePath = path.normalize(path.join(PUBLIC_DIR, requested));
   if (!filePath.startsWith(PUBLIC_DIR)) return send(res, 403, 'Acesso negado', 'text/plain; charset=utf-8');
 

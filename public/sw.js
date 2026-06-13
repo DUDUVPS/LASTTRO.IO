@@ -1,9 +1,19 @@
-const CACHE_NAME = 'lasttro-pwa-v3';
+const CACHE_NAME = 'lasttro-pwa-v4';
 const APP_SHELL = [
   '/',
   '/app',
+  '/servicos',
+  '/funcionalidades',
+  '/planos',
+  '/sobre',
+  '/suporte',
   '/index.html',
   '/apresentacao.html',
+  '/servicos.html',
+  '/funcionalidades.html',
+  '/planos.html',
+  '/sobre.html',
+  '/suporte.html',
   '/offline.html',
   '/styles.css',
   '/presentation.css',
