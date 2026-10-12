@@ -1192,6 +1192,7 @@ function updateTransactionCategoryOptions() {
   select.innerHTML = categories.map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join('');
   if (categories.includes(selected)) select.value = selected;
   toggleCustomCategoryField();
+  updateTransactionPaymentOptions();
 }
 
 function toggleCustomCategoryField() {
@@ -2107,6 +2108,7 @@ function workMiniTemplate(work) {
 function transactionCardTemplate(item) {
   const style = transactionStyle(item.tipo);
   const recurring = item.recorrente ? ' recorrente' : '';
+  const payment = transactionPaymentLabel(item);
   const note = item.icon === 'fa-file-invoice-dollar' || item.cat === 'Boleto'
     ? 'Boleto pago registrado no financeiro'
     : item.tipo === 'saida'
@@ -2118,6 +2120,7 @@ function transactionCardTemplate(item) {
       <div class="card-main">
         <strong>${escapeHtml(item.nome)}</strong>
         <span>${escapeHtml(item.cat)} · ${escapeHtml(item.data)} · ${escapeHtml(item.tipo)}</span>
+        ${payment ? `<span class="transaction-payment-label"><i class="fa-solid ${item.formaPagamento === 'credito' ? 'fa-credit-card' : 'fa-wallet'}"></i>${escapeHtml(payment)}</span>` : ''}
         <span class="card-note">${note}${recurring}</span>
       </div>
       <div class="card-value" style="color:${style.color}">${item.val > 0 ? '+' : '-'}${formatMoney(Math.abs(item.val))}</div>
@@ -2157,6 +2160,138 @@ function buildAccountGroups(accounts, cards) {
     .forEach(card => groups.push({ account: null, cards: [card] }));
 
   return groups;
+}
+
+function transactionBankGroups() {
+  const items = state.data?.contasCartoes || [];
+  const accounts = items.filter(item => item.tipo === 'conta');
+  const cards = items.filter(item => item.tipo === 'cartao');
+  return buildAccountGroups(accounts, cards).map(group => {
+    const card = group.cards?.[0] || null;
+    const account = group.account || null;
+    return {
+      id: account?.groupId || card?.groupId || account?.id || card?.id || '',
+      account,
+      card,
+      title: account?.nome || card?.nome || 'Banco sem nome',
+      detail: account?.bandeira || card?.bandeira || 'Conta'
+    };
+  }).filter(group => group.id && (group.account || group.card));
+}
+
+function transactionGroupForItem(item = {}) {
+  const groups = transactionBankGroups();
+  return groups.find(group => {
+    if (item.contaGrupoId && group.id === item.contaGrupoId) return true;
+    if (item.contaId && group.account?.id === item.contaId) return true;
+    if (item.cartaoId && group.card?.id === item.cartaoId) return true;
+    return false;
+  }) || groups[0] || null;
+}
+
+function transactionPaymentMethods(group, type) {
+  if (!group) return [];
+  const methods = [];
+  if (group.account) methods.push({ value: 'debito', label: 'Debito', hint: `Saldo ${formatMoney(group.account.saldo || 0)}` });
+  if (type === 'saida' && group.card) methods.push({ value: 'credito', label: 'Credito', hint: `Fatura ${formatMoney(group.card.usado || 0)}` });
+  return methods;
+}
+
+function transactionPaymentFields(item, type) {
+  const groups = transactionBankGroups();
+  if (!groups.length) {
+    return `
+      <section class="transaction-edit-section">
+        <div class="transaction-edit-title"><i class="fa-solid fa-building-columns"></i><span>Banco usado</span></div>
+        <div class="transaction-bank-empty">Cadastre um banco ou cartao na aba Conta antes de lancar movimentacoes.</div>
+        <input type="hidden" name="contaGrupoId" value="">
+        <input type="hidden" name="formaPagamento" value="">
+      </section>
+    `;
+  }
+  const selectedGroup = transactionGroupForItem(item) || groups[0];
+  const preferredMethod = item.formaPagamento === 'credito' ? 'credito' : 'debito';
+  const methods = transactionPaymentMethods(selectedGroup, type);
+  const selectedMethod = methods.some(method => method.value === preferredMethod) ? preferredMethod : methods[0]?.value || '';
+  return `
+    <section class="transaction-edit-section">
+      <div class="transaction-edit-title"><i class="fa-solid fa-building-columns"></i><span>Banco usado</span></div>
+      <div class="transaction-payment-grid">
+        <label>Banco
+          <select name="contaGrupoId" id="transactionAccountGroup" required>
+            ${groups.map(group => `<option value="${escapeHtml(group.id)}" ${group.id === selectedGroup.id ? 'selected' : ''}>${escapeHtml(group.title)} - ${escapeHtml(group.detail)}</option>`).join('')}
+          </select>
+        </label>
+        <label>Usar como
+          <select name="formaPagamento" id="transactionPaymentMethod" required>
+            ${methods.map(method => `<option value="${method.value}" ${method.value === selectedMethod ? 'selected' : ''}>${method.label} - ${escapeHtml(method.hint)}</option>`).join('')}
+          </select>
+        </label>
+      </div>
+      <div class="transaction-payment-preview" id="transactionPaymentPreview"></div>
+    </section>
+  `;
+}
+
+function updateTransactionPaymentOptions() {
+  const groupSelect = qs('#transactionAccountGroup');
+  const methodSelect = qs('#transactionPaymentMethod');
+  const preview = qs('#transactionPaymentPreview');
+  if (!groupSelect || !methodSelect) return;
+  const form = qs('#entityForm');
+  const type = new FormData(form).get('tipo') || 'saida';
+  const groups = transactionBankGroups();
+  const group = groups.find(item => item.id === groupSelect.value) || groups[0];
+  const previous = methodSelect.value;
+  const methods = transactionPaymentMethods(group, type);
+  methodSelect.innerHTML = methods.map(method => `<option value="${method.value}">${method.label} - ${escapeHtml(method.hint)}</option>`).join('');
+  methodSelect.value = methods.some(method => method.value === previous) ? previous : methods[0]?.value || '';
+  methodSelect.disabled = false;
+  if (!preview) return;
+  const method = methodSelect.value;
+  const balance = group?.account ? formatMoney(group.account.saldo || 0) : 'sem saldo cadastrado';
+  const invoice = group?.card ? formatMoney(group.card.usado || 0) : 'sem cartao';
+  preview.innerHTML = method === 'credito'
+    ? `<i class="fa-solid fa-credit-card"></i><span>${escapeHtml(group?.title || 'Banco')} vai receber esta saida na fatura. Fatura atual: <strong>${invoice}</strong>.</span>`
+    : `<i class="fa-solid fa-wallet"></i><span>${escapeHtml(group?.title || 'Banco')} vai usar o saldo da conta. Saldo atual: <strong>${balance}</strong>.</span>`;
+}
+
+function applyTransactionPaymentData(data) {
+  const groups = transactionBankGroups();
+  const group = groups.find(item => item.id === data.contaGrupoId);
+  if (!group) {
+    showToast('Escolha um banco', 'Cadastre ou selecione uma conta para essa movimentacao.');
+    return false;
+  }
+  const method = data.formaPagamento === 'credito' ? 'credito' : 'debito';
+  if (method === 'credito') {
+    if (!group.card || data.tipo !== 'saida') {
+      showToast('Credito indisponivel', 'Credito so pode ser usado em saidas com cartao cadastrado.');
+      return false;
+    }
+    data.cartaoId = group.card.id;
+    data.contaId = group.account?.id || '';
+  } else {
+    if (!group.account) {
+      showToast('Debito indisponivel', 'Esse grupo nao tem conta de debito cadastrada.');
+      return false;
+    }
+    data.contaId = group.account.id;
+    data.cartaoId = '';
+    data.formaPagamento = 'debito';
+  }
+  data.contaGrupoId = group.id;
+  data.bancoNome = group.title;
+  return true;
+}
+
+function transactionPaymentLabel(item) {
+  if (!item.formaPagamento && !item.bancoNome) return '';
+  const groups = transactionBankGroups();
+  const group = groups.find(entry => entry.id === item.contaGrupoId || entry.account?.id === item.contaId || entry.card?.id === item.cartaoId);
+  const bank = item.bancoNome || group?.title || 'Banco';
+  const method = item.formaPagamento === 'credito' ? 'Credito' : 'Debito';
+  return `${bank} - ${method}`;
 }
 
 function findRelatedAccountParts(item) {
@@ -2436,8 +2571,10 @@ function openModal(type, editItem = null) {
           </label>
         </div>
       </section>
+      ${transactionPaymentFields(item, transactionType)}
     `;
     updateTransactionCategoryOptions();
+    updateTransactionPaymentOptions();
     const categories = transactionCategories[transactionType] || [];
     if (item.cat && categories.includes(item.cat)) {
       qs('#transactionCategorySelect').value = item.cat;
@@ -2791,6 +2928,7 @@ async function submitModal(event) {
     data.recorrente = data.recorrente === 'true';
     delete data.catPreset;
     delete data.catCustom;
+    if (!applyTransactionPaymentData(data)) return;
   }
   if (state.modalType === 'work' && academicKind(data) === 'estudo') {
     const subject = data.disciplinaPreset === '__nova__'
@@ -3302,6 +3440,7 @@ function bindEvents() {
   qs('#entityForm').addEventListener('change', event => {
     if (event.target.name === 'tipo') updateTransactionCategoryOptions();
     if (event.target.id === 'transactionCategorySelect') toggleCustomCategoryField();
+    if (event.target.id === 'transactionAccountGroup' || event.target.id === 'transactionPaymentMethod') updateTransactionPaymentOptions();
     if (event.target.id === 'accountCreditToggle') updateAccountCreditMode();
     if (event.target.id === 'studySubjectSelect') updateStudySubjectMode();
     if (event.target.id === 'goalTypeSelect') {

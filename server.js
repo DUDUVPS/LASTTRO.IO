@@ -423,6 +423,7 @@ function normalizeTransaction(item) {
   const tipo = ['entrada', 'saida'].includes(item.tipo) ? item.tipo : 'saida';
   const rawVal = moneyValue(item.val);
   const val = tipo === 'saida' ? -Math.abs(rawVal) : Math.abs(rawVal);
+  const formaPagamento = item.formaPagamento === 'credito' && tipo === 'saida' ? 'credito' : 'debito';
   return {
     id: item.id || crypto.randomUUID(),
     nome: String(item.nome || 'Sem nome').trim(),
@@ -431,8 +432,29 @@ function normalizeTransaction(item) {
     val,
     data: item.data || new Date().toISOString().slice(0, 10),
     recorrente: item.recorrente === true || item.recorrente === 'true',
+    formaPagamento,
+    contaGrupoId: String(item.contaGrupoId || '').trim(),
+    contaId: String(item.contaId || '').trim(),
+    cartaoId: String(item.cartaoId || '').trim(),
+    bancoNome: String(item.bancoNome || '').trim(),
     icon: item.icon || (tipo === 'entrada' ? 'fa-coins' : 'fa-receipt')
   };
+}
+
+function applyTransactionAccountEffect(data, transaction, direction = 1) {
+  if (!transaction?.formaPagamento) return;
+  const amount = Math.abs(moneyValue(transaction.val));
+  if (!amount) return;
+  const items = data.contasCartoes || [];
+  if (transaction.formaPagamento === 'credito' && transaction.tipo === 'saida') {
+    const card = items.find(item => item.id === transaction.cartaoId && item.tipo === 'cartao');
+    if (card) card.usado = moneyValue(Math.max(0, moneyValue(card.usado) + amount * direction));
+    return;
+  }
+  if (transaction.formaPagamento === 'debito') {
+    const account = items.find(item => item.id === transaction.contaId && item.tipo === 'conta');
+    if (account) account.saldo = moneyValue(moneyValue(account.saldo) + Number(transaction.val || 0) * direction);
+  }
 }
 
 async function refreshGmailAccessToken(user) {
@@ -996,6 +1018,7 @@ async function handleApi(req, res, pathname) {
 
   if (req.method === 'POST' && collection === 'transacoes') {
     const created = normalizeTransaction(await readBody(req));
+    applyTransactionAccountEffect(data, created, 1);
     data.transacoes.unshift(created);
     await writeDb(db);
     return send(res, 201, created);
@@ -1086,6 +1109,15 @@ async function handleApi(req, res, pathname) {
   if (match && req.method === 'PUT') {
     const [, name, id] = match;
     const body = await readBody(req);
+    if (name === 'transacoes') {
+      const index = data.transacoes.findIndex(item => item.id === id);
+      if (index === -1) return send(res, 404, { error: 'Transacao nao encontrada' });
+      applyTransactionAccountEffect(data, data.transacoes[index], -1);
+      data.transacoes[index] = normalizeTransaction({ ...data.transacoes[index], ...body, id });
+      applyTransactionAccountEffect(data, data.transacoes[index], 1);
+      await writeDb(db);
+      return send(res, 200, data.transacoes[index]);
+    }
     if (name === 'contas-cartoes') {
       const index = data.contasCartoes.findIndex(item => item.id === id);
       if (index === -1) return send(res, 404, { error: 'Conta ou cartao nao encontrado' });
@@ -1125,7 +1157,12 @@ async function handleApi(req, res, pathname) {
 
   if (match && req.method === 'DELETE') {
     const [, name, id] = match;
-    if (name === 'contas-cartoes') data.contasCartoes = data.contasCartoes.filter(item => item.id !== id);
+    if (name === 'transacoes') {
+      const transaction = data.transacoes.find(item => item.id === id);
+      applyTransactionAccountEffect(data, transaction, -1);
+      data.transacoes = data.transacoes.filter(item => item.id !== id);
+    }
+    else if (name === 'contas-cartoes') data.contasCartoes = data.contasCartoes.filter(item => item.id !== id);
     else if (name === 'investimentos') data.investimentosCarteira = data.investimentosCarteira.filter(item => item.id !== id);
     else data[name] = data[name].filter(item => item.id !== id);
     await writeDb(db);

@@ -3190,7 +3190,8 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
   background: rgba(255,255,255,.025);
 }
 
-.goal-edit-title {
+.goal-edit-title,
+.transaction-edit-title {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -3201,7 +3202,8 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
   font-weight: 800;
 }
 
-.goal-edit-title i {
+.goal-edit-title i,
+.transaction-edit-title i {
   width: 24px;
   height: 24px;
   display: grid;
@@ -3250,6 +3252,50 @@ dialog::backdrop { background: rgba(0,0,0,.62); }
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.transaction-payment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.transaction-payment-preview,
+.transaction-bank-empty,
+.transaction-payment-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.transaction-payment-preview,
+.transaction-bank-empty {
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid rgba(74,158,255,.2);
+  border-radius: 8px;
+  color: var(--muted);
+  background: rgba(74,158,255,.06);
+}
+
+.transaction-payment-preview i {
+  color: var(--green);
+}
+
+.transaction-payment-preview strong {
+  color: var(--text);
+}
+
+.transaction-payment-label {
+  width: fit-content;
+  margin-top: 7px;
+  padding: 5px 8px;
+  border: 1px solid rgba(74,158,255,.22);
+  border-radius: 999px;
+  color: var(--blue);
+  background: rgba(74,158,255,.08);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .toggle-line {
@@ -3350,6 +3396,7 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
   .cashflow-grid, .metric-grid, .dashboard-grid, .finance-values, .finance-value-grid, .finance-insights, .finance-toolbar, .finance-tabs, .health-overview, .health-edit-grid, .health-edit-grid.three, .account-overview, .account-card-grid.unified, .account-combo-values, .investment-overview, .investment-grid, .category-grid, .goals-overview, .work-overview, .work-board, .study-overview, .study-subject-list, .study-edit-grid, .home-overview, .home-board, .home-edit-grid, .home-edit-grid.three, .bill-summary-grid, .pantry-essentials-head, .pantry-essential-grid, .email-grid, .report-grid { grid-template-columns: 1fr; }
   .statement-grid,
   .transaction-edit-grid,
+  .transaction-payment-grid,
   .goal-edit-grid,
   .transaction-type-toggle {
     grid-template-columns: 1fr;
