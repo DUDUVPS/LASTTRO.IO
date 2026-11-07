@@ -400,6 +400,10 @@ function normalizeTransaction(item) {
   const rawVal = moneyValue(item.val);
   const val = tipo === 'saida' ? -Math.abs(rawVal) : Math.abs(rawVal);
   const formaPagamento = item.formaPagamento === 'credito' && tipo === 'saida' ? 'credito' : 'debito';
+  const parcelas = formaPagamento === 'credito'
+    ? Math.min(120, Math.max(1, Math.trunc(parseDecimal(item.parcelas, 1)))) : 1;
+  const parcelasPagas = parcelas > 1
+    ? Math.min(parcelas, Math.max(0, Math.trunc(parseDecimal(item.parcelasPagas, 0)))) : 0;
   return {
     id: item.id || crypto.randomUUID(),
     nome: String(item.nome || 'Sem nome').trim(),
@@ -409,6 +413,8 @@ function normalizeTransaction(item) {
     data: item.data || new Date().toISOString().slice(0, 10),
     recorrente: item.recorrente === true || item.recorrente === 'true',
     formaPagamento,
+    parcelas,
+    parcelasPagas,
     contaGrupoId: String(item.contaGrupoId || '').trim(),
     contaId: String(item.contaId || '').trim(),
     cartaoId: String(item.cartaoId || '').trim(),
@@ -423,6 +429,7 @@ function applyTransactionAccountEffect(data, transaction, direction = 1) {
   if (!amount) return;
   const items = data.contasCartoes || [];
   if (transaction.formaPagamento === 'credito' && transaction.tipo === 'saida') {
+    if (Number(transaction.parcelas || 1) > 1) return;
     const card = items.find(item => item.id === transaction.cartaoId && item.tipo === 'cartao');
     if (card) card.usado = moneyValue(Math.max(0, moneyValue(card.usado) + amount * direction));
     return;
@@ -553,6 +560,14 @@ function currentInstallment(card) {
   return moneyValue(total * (paid + 1) / count - moneyValue(total * paid / count));
 }
 
+function transactionInstallment(transaction) {
+  const total = Math.abs(moneyValue(transaction.val));
+  const count = Number(transaction.parcelas || 1);
+  const paid = Math.min(count, Math.max(0, Number(transaction.parcelasPagas || 0)));
+  if (transaction.formaPagamento !== 'credito' || transaction.tipo !== 'saida' || count <= 1 || paid >= count) return 0;
+  return moneyValue(total * (paid + 1) / count - moneyValue(total * paid / count));
+}
+
 function normalizeGoal(item) {
   const tipo = ['dinheiro', 'habito', 'tarefa', 'estudo', 'outro'].includes(item.tipo) ? item.tipo : 'dinheiro';
   const unidade = String(item.unidade || (tipo === 'dinheiro' ? 'R$' : tipo === 'habito' ? 'dias' : tipo === 'estudo' ? 'horas' : 'itens')).trim();
@@ -663,7 +678,8 @@ function buildResumo(db) {
     .reduce((s, r) => s + Number(r.totalDevolver || 0), 0);
   const cartoesTotal = db.contasCartoes
     .filter(c => c.tipo === 'cartao')
-    .reduce((s, c) => s + Number(c.usado || 0) + currentInstallment(c), 0);
+    .reduce((s, c) => s + Number(c.usado || 0) + currentInstallment(c)
+      + db.transacoes.filter(t => t.cartaoId === c.id).reduce((total, t) => total + transactionInstallment(t), 0), 0);
   const contasSaldo = db.contasCartoes
     .filter(c => c.tipo === 'conta')
     .reduce((s, c) => s + Number(c.saldo || 0), 0);

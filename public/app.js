@@ -1328,8 +1328,8 @@ function renderAccountsCards() {
   const accounts = items.filter(item => item.tipo === 'conta');
   const cards = items.filter(item => item.tipo === 'cartao');
   const accountBalance = accounts.reduce((sum, item) => sum + Number(item.saldo || 0), 0);
-  const cardUsed = cards.reduce((sum, item) => sum + Number(item.usado || 0) + cardInstallmentInfo(item).current, 0);
-  const cardCommitted = cards.reduce((sum, item) => sum + Number(item.usado || 0) + cardInstallmentInfo(item).remaining, 0);
+  const cardUsed = cards.reduce((sum, item) => sum + Number(item.usado || 0) + cardInstallmentTotals(item).current, 0);
+  const cardCommitted = cards.reduce((sum, item) => sum + Number(item.usado || 0) + cardInstallmentTotals(item).remaining, 0);
   const cardLimit = cards.reduce((sum, item) => sum + Number(item.limite || 0), 0);
   const availableLimit = Math.max(0, cardLimit - cardCommitted);
 
@@ -2079,9 +2079,11 @@ function buildAccountGroups(accounts, cards) {
   const groups = accounts.map(account => {
     const key = accountKey(account);
     const relatedCards = cards.filter(card => {
+      if (usedCards.has(card.id)) return false;
       const sameGroup = account.groupId && card.groupId && account.groupId === card.groupId;
       const cardKey = accountKey(card);
-      const sameBank = key && cardKey && key === cardKey;
+      const legacyGroup = account.groupId === account.id || card.groupId === card.id;
+      const sameBank = legacyGroup && key && cardKey && key === cardKey;
       if (sameGroup || sameBank) usedCards.add(card.id);
       return sameGroup || sameBank;
     });
@@ -2126,7 +2128,7 @@ function transactionPaymentMethods(group, type) {
   if (!group) return [];
   const methods = [];
   if (group.account) methods.push({ value: 'debito', label: 'Debito', hint: `Saldo ${formatMoney(group.account.saldo || 0)}` });
-  if (type === 'saida' && group.card) methods.push({ value: 'credito', label: 'Credito', hint: `Fatura ${formatMoney(Number(group.card.usado || 0) + cardInstallmentInfo(group.card).current)}` });
+  if (type === 'saida' && group.card) methods.push({ value: 'credito', label: 'Credito', hint: `Fatura ${formatMoney(Number(group.card.usado || 0) + cardInstallmentTotals(group.card).current)}` });
   return methods;
 }
 
@@ -2161,6 +2163,9 @@ function transactionPaymentFields(item, type) {
           </select>
         </label>
       </div>
+      <label class="transaction-installments" id="transactionInstallmentsField">Parcelas
+        <input name="parcelas" id="transactionInstallments" type="number" min="1" max="120" step="1" value="${Math.max(1, Number(item.parcelas || 1))}">
+      </label>
       <div class="transaction-payment-preview" id="transactionPaymentPreview"></div>
     </section>
   `;
@@ -2180,12 +2185,23 @@ function updateTransactionPaymentOptions() {
   methodSelect.innerHTML = methods.map(method => `<option value="${method.value}">${method.label} - ${escapeHtml(method.hint)}</option>`).join('');
   methodSelect.value = methods.some(method => method.value === previous) ? previous : methods[0]?.value || '';
   methodSelect.disabled = false;
+  const installmentsField = qs('#transactionInstallmentsField');
+  const installmentsInput = qs('#transactionInstallments');
+  if (installmentsField && installmentsInput) {
+    const credit = methodSelect.value === 'credito' && type === 'saida';
+    installmentsField.classList.toggle('hidden', !credit);
+    installmentsInput.disabled = !credit;
+  }
   if (!preview) return;
   const method = methodSelect.value;
   const balance = group?.account ? formatMoney(group.account.saldo || 0) : 'sem saldo cadastrado';
-  const invoice = group?.card ? formatMoney(Number(group.card.usado || 0) + cardInstallmentInfo(group.card).current) : 'sem cartao';
+  const invoice = group?.card ? formatMoney(Number(group.card.usado || 0) + cardInstallmentTotals(group.card).current) : 'sem cartao';
+  const amount = Math.abs(moneyValue(qs('[name="val"]', form)?.value || 0));
+  const count = Number(installmentsInput?.value || 1);
+  const installment = Number.isInteger(count) && count > 1 && count <= 120 && amount
+    ? ` Compra de ${formatMoney(amount)} em ${count}x; primeira parcela ${formatMoney(cardInstallmentInfo({ parceladoTotal: amount, parcelas: count }).current)}.` : '';
   preview.innerHTML = method === 'credito'
-    ? `<i class="fa-solid fa-credit-card"></i><span>${escapeHtml(group?.title || 'Banco')} vai receber esta saida na fatura. Fatura atual: <strong>${invoice}</strong>.</span>`
+    ? `<i class="fa-solid fa-credit-card"></i><span>${escapeHtml(group?.title || 'Banco')} vai receber esta saida na fatura. Fatura atual: <strong>${invoice}</strong>.${installment}</span>`
     : `<i class="fa-solid fa-wallet"></i><span>${escapeHtml(group?.title || 'Banco')} vai usar o saldo da conta. Saldo atual: <strong>${balance}</strong>.</span>`;
 }
 
@@ -2204,6 +2220,13 @@ function applyTransactionPaymentData(data) {
     }
     data.cartaoId = group.card.id;
     data.contaId = group.account?.id || '';
+    const installments = Number(data.parcelas || 1);
+    if (!Number.isInteger(installments) || installments < 1 || installments > 120) {
+      showToast('Parcelas invalidas', 'Escolha um numero de 1 a 120 parcelas.');
+      return false;
+    }
+    data.parcelas = installments;
+    data.parcelasPagas = 0;
   } else {
     if (!group.account) {
       showToast('Debito indisponivel', 'Esse grupo nao tem conta de debito cadastrada.');
@@ -2212,6 +2235,8 @@ function applyTransactionPaymentData(data) {
     data.contaId = group.account.id;
     data.cartaoId = '';
     data.formaPagamento = 'debito';
+    data.parcelas = 1;
+    data.parcelasPagas = 0;
   }
   data.contaGrupoId = group.id;
   data.bancoNome = group.title;
@@ -2224,7 +2249,8 @@ function transactionPaymentLabel(item) {
   const group = groups.find(entry => entry.id === item.contaGrupoId || entry.account?.id === item.contaId || entry.card?.id === item.cartaoId);
   const bank = item.bancoNome || group?.title || 'Banco';
   const method = item.formaPagamento === 'credito' ? 'Credito' : 'Debito';
-  return `${bank} - ${method}`;
+  const installments = item.formaPagamento === 'credito' && Number(item.parcelas || 1) > 1 ? ` · ${item.parcelas}x` : '';
+  return `${bank} - ${method}${installments}`;
 }
 
 function findRelatedAccountParts(item) {
@@ -2252,8 +2278,8 @@ function accountGroupTemplate(group) {
   const cards = group.cards || [];
   const mainCard = cards[0];
   const balance = Number(account?.saldo || 0);
-  const used = cards.reduce((sum, card) => sum + Number(card.usado || 0) + cardInstallmentInfo(card).current, 0);
-  const committed = cards.reduce((sum, card) => sum + Number(card.usado || 0) + cardInstallmentInfo(card).remaining, 0);
+  const used = cards.reduce((sum, card) => sum + Number(card.usado || 0) + cardInstallmentTotals(card).current, 0);
+  const committed = cards.reduce((sum, card) => sum + Number(card.usado || 0) + cardInstallmentTotals(card).remaining, 0);
   const limit = cards.reduce((sum, card) => sum + Number(card.limite || 0), 0);
   const pct = limit > 0 ? Math.min(100, Math.round((committed / limit) * 100)) : 0;
   const available = Math.max(0, limit - committed);
@@ -2291,7 +2317,9 @@ function accountGroupTemplate(group) {
           </div>
           ${cards.map(card => {
             const plan = cardInstallmentInfo(card);
-            return plan.total ? `<div class="credit-installment"><span><i class="fa-solid fa-layer-group"></i> Parcelado ${formatMoney(plan.total)} em ${plan.count}x de ${formatMoney(plan.current || plan.average)}</span><small>${plan.paid}/${plan.count} pagas · ${formatMoney(plan.remaining)} ainda comprometidos</small></div>` : '';
+            const manual = plan.total ? `<div class="credit-installment"><span><i class="fa-solid fa-layer-group"></i> Parcelado ${formatMoney(plan.total)} em ${plan.count}x de ${formatMoney(plan.current || plan.average)}</span><small>${plan.paid}/${plan.count} pagas · ${formatMoney(plan.remaining)} ainda comprometidos</small></div>` : '';
+            const purchases = cardTransactionInstallments(card).map(({ transaction, plan: purchase }) => `<div class="credit-installment"><span><i class="fa-solid fa-layer-group"></i> ${escapeHtml(transaction.nome)} · ${purchase.count}x de ${formatMoney(purchase.current || purchase.average)}</span><small>${purchase.paid}/${purchase.count} pagas · ${formatMoney(purchase.remaining)} comprometidos</small>${purchase.paid < purchase.count ? `<button class="credit-installment-pay" type="button" data-pay-installment="${escapeHtml(transaction.id)}">Marcar parcela paga</button>` : ''}</div>`).join('');
+            return manual + purchases;
           }).join('')}
           <div class="credit-scale">
             <div><small>0</small><small>${formatMoney(limit).replace('R$', '').trim()}</small></div>
@@ -2323,6 +2351,21 @@ function cardInstallmentInfo(card) {
     current: count && paid < count ? moneyValue(total * (paid + 1) / count - paidValue) : 0,
     remaining: moneyValue(total - paidValue)
   };
+}
+
+function cardTransactionInstallments(card) {
+  if (!card?.id) return [];
+  return (state.data?.transacoes || [])
+    .filter(transaction => transaction.cartaoId === card.id && transaction.formaPagamento === 'credito' && transaction.tipo === 'saida' && Number(transaction.parcelas || 1) > 1)
+    .map(transaction => ({ transaction, plan: cardInstallmentInfo({ parceladoTotal: Math.abs(Number(transaction.val || 0)), parcelas: transaction.parcelas, parcelasPagas: transaction.parcelasPagas || 0 }) }));
+}
+
+function cardInstallmentTotals(card) {
+  const manual = cardInstallmentInfo(card);
+  return cardTransactionInstallments(card).reduce((totals, item) => ({
+    current: moneyValue(totals.current + item.plan.current),
+    remaining: moneyValue(totals.remaining + item.plan.remaining)
+  }), { current: manual.current, remaining: manual.remaining });
 }
 
 function investmentCardTemplate(item) {
@@ -3284,9 +3327,29 @@ async function duplicateTransaction(id) {
   const copy = {
     ...item,
     id: undefined,
-    data: new Date().toISOString().slice(0, 10)
+    data: new Date().toISOString().slice(0, 10),
+    parcelasPagas: 0
   };
   openModal('transaction', copy);
+}
+
+async function payCreditInstallment(id, button) {
+  const transaction = (state.data?.transacoes || []).find(item => item.id === id);
+  if (!transaction || Number(transaction.parcelas || 1) <= 1) return;
+  const paid = Number(transaction.parcelasPagas || 0);
+  if (paid >= Number(transaction.parcelas)) return;
+  button.disabled = true;
+  try {
+    await api(`/api/transacoes/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ parcelasPagas: paid + 1 })
+    });
+    await loadDashboard();
+    showToast('Parcela registrada', `${paid + 1} de ${transaction.parcelas} pagas.`);
+  } catch (error) {
+    button.disabled = false;
+    showToast('Nao foi possivel registrar', safeApiError(error.message));
+  }
 }
 
 function renderEmail() {
@@ -3461,6 +3524,7 @@ function bindEvents() {
   qs('#entityForm').addEventListener('input', event => {
     if (state.modalType === 'bankWithdraw' && event.target.name === 'valor') updateWithdrawSimulation();
     if (state.modalType === 'account' && ['parceladoTotal', 'parcelas', 'parcelasPagas'].includes(event.target.name)) updateAccountInstallmentPreview();
+    if (state.modalType === 'transaction' && ['val', 'parcelas'].includes(event.target.name)) updateTransactionPaymentOptions();
   });
 
   document.body.addEventListener('dragstart', event => {
@@ -3552,6 +3616,12 @@ function bindEvents() {
     const editAccountButton = event.target.closest('[data-edit-account]');
     if (editAccountButton) {
       editAccount(editAccountButton.dataset.editAccount);
+      return;
+    }
+
+    const payInstallmentButton = event.target.closest('[data-pay-installment]');
+    if (payInstallmentButton) {
+      payCreditInstallment(payInstallmentButton.dataset.payInstallment, payInstallmentButton);
       return;
     }
 
