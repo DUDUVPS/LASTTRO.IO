@@ -406,7 +406,20 @@ button { border: 0; cursor: pointer; }
 
 .notification-button {
   position: relative;
-  margin-left: auto;
+  margin-left: 0;
+}
+
+.privacy-toggle { margin-left: auto; }
+.privacy-toggle[aria-pressed="true"] { color: var(--blue); border-color: rgba(74,158,255,.42); }
+.values-hidden .private-value { color: transparent !important; position: relative; }
+.values-hidden .private-value::after {
+  content: 'R$ ••••';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text);
+  white-space: nowrap;
 }
 
 .notification-button span {

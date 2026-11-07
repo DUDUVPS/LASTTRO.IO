@@ -274,31 +274,6 @@ function formatServerMoney(value) {
 function buildPushAlerts(data) {
   const resumo = buildResumo(data);
   const alerts = [];
-  const today = new Date().toISOString().slice(0, 10);
-  const soon = new Date();
-  soon.setDate(soon.getDate() + 3);
-  const soonDate = soon.toISOString().slice(0, 10);
-  const nextBill = (data.casa || [])
-    .filter(item => item.tipo === 'conta' && item.status !== 'feito' && item.vencimento)
-    .filter(item => item.vencimento >= today && item.vencimento <= soonDate)
-    .sort((a, b) => a.vencimento.localeCompare(b.vencimento))[0];
-
-  if (nextBill) {
-    alerts.push({
-      title: 'Boleto chegando',
-      body: `${nextBill.nome} vence em ${nextBill.vencimento.split('-').reverse().join('/')} no valor de ${formatServerMoney(nextBill.valor)}.`
-    });
-  }
-
-  const lowPantry = (data.casa || [])
-    .filter(item => item.tipo === 'despensa')
-    .filter(item => Number(item.quantidade || 0) <= Number(item.minimo || 0));
-  if (lowPantry.length) {
-    alerts.push({
-      title: 'Despensa em baixo nivel',
-      body: `${lowPantry.slice(0, 3).map(item => item.nome).join(', ')}${lowPantry.length > 3 ? ` e mais ${lowPantry.length - 3}` : ''}.`
-    });
-  }
 
   if (Number(resumo.gastos || 0) > Number(resumo.entradas || 0)) {
     alerts.push({

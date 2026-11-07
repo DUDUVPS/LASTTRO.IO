@@ -23,6 +23,7 @@ const state = {
   authMode: 'login',
   authToken: localStorage.getItem('lasttroToken') || '',
   user: JSON.parse(localStorage.getItem('lasttroUser') || 'null'),
+  valuesHidden: localStorage.getItem('lasttroValuesHidden') === 'true',
   shortcutApplied: false
 };
 
@@ -524,6 +525,29 @@ function renderAll() {
   renderHome();
   renderEmail();
   renderSmartSuggestions();
+  markPrivateValues();
+}
+
+function markPrivateValues() {
+  qsa('#view-overview, #view-finance, #view-goals, #view-work, #notificationPopout').forEach(view => {
+    qsa('*', view).forEach(element => {
+      if (!element.textContent.includes('R$')) return;
+      if ([...element.children].some(child => child.textContent.includes('R$'))) return;
+      element.classList.add('private-value');
+    });
+  });
+  qs('#appShell').classList.toggle('values-hidden', state.valuesHidden);
+  const button = qs('#privacyToggle');
+  button.setAttribute('aria-pressed', String(state.valuesHidden));
+  button.setAttribute('aria-label', state.valuesHidden ? 'Mostrar valores' : 'Ocultar valores');
+  button.title = state.valuesHidden ? 'Mostrar valores' : 'Ocultar valores';
+  qs('i', button).className = state.valuesHidden ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
+}
+
+function togglePrivateValues() {
+  state.valuesHidden = !state.valuesHidden;
+  localStorage.setItem('lasttroValuesHidden', String(state.valuesHidden));
+  markPrivateValues();
 }
 
 function renderSummary() {
@@ -542,7 +566,6 @@ function renderSummary() {
 
 function renderOverview() {
   const { transacoes, metas, trabalhos, resumo, investimentosCarteira } = state.data;
-  renderAgendaHub();
   renderCategoryChart(resumo.porCategoria);
   renderOverviewInvestmentChart(investimentosCarteira);
 
@@ -652,6 +675,7 @@ function renderFinance() {
   qs('#transactionsTotal').textContent = formatMoney(total);
   list.innerHTML = filtered.map(transactionCardTemplate).join('') || emptyTemplate('Nenhuma transacao nesta categoria.');
   renderMonthlyStatements();
+  markPrivateValues();
 }
 
 function buildAgendaItems() {
@@ -744,42 +768,6 @@ function buildSmartSuggestions() {
       text: `${nextWork.nome} esta marcado para ${new Date(`${nextWork.inicio}T00:00:00`).toLocaleDateString('pt-BR')}.`
     });
   }
-  const lowPantry = (state.data.casa || [])
-    .filter(item => item.tipo === 'despensa')
-    .filter(item => Number(item.quantidade || 0) <= Number(item.minimo || 0));
-  if (lowPantry.length) {
-    suggestions.push({
-      kind: 'home',
-      icon: 'fa-boxes-stacked',
-      title: 'Despensa com estoque baixo',
-      text: `${lowPantry.slice(0, 3).map(item => item.nome).join(', ')}${lowPantry.length > 3 ? ` e mais ${lowPantry.length - 3}` : ''}.`
-    });
-  }
-  const today = localDateKey();
-  const water = (state.data.saude || [])
-    .filter(item => item.tipo === 'hidratacao' && item.data === today)
-    .reduce((sum, item) => sum + Number(item.quantidade || 0), 0);
-  if (water < 2000) {
-    suggestions.push({
-      kind: 'health',
-      icon: 'fa-droplet',
-      title: 'Bora beber agua?',
-      text: `Hoje tem ${formatDecimal(water)} ml registrado. Sua meta pode ficar mais perto agora.`
-    });
-  }
-  const dueBill = (state.data.casa || [])
-    .filter(item => item.tipo === 'conta' && item.status !== 'feito' && item.vencimento)
-    .map(item => ({ ...item, days: daysBetween(item.vencimento) }))
-    .filter(item => item.days !== null && item.days <= 3)
-    .sort((a, b) => a.days - b.days)[0];
-  if (dueBill) {
-    suggestions.push({
-      kind: 'home',
-      icon: 'fa-file-invoice-dollar',
-      title: 'Boleto chegando',
-      text: `${dueBill.nome} vence ${relativeDate(dueBill.vencimento).toLowerCase()} no valor de ${formatMoney(dueBill.valor)}.`
-    });
-  }
   if (!suggestions.length) {
     suggestions.push({ kind: 'system', icon: 'fa-sparkles', title: 'Tudo organizado', text: 'Seu painel esta tranquilo hoje. Continue alimentando os dados.' });
   }
@@ -826,6 +814,7 @@ function renderSmartSuggestions() {
     `;
   }
   maybeNotifySmartSuggestion(visibleSuggestions);
+  markPrivateValues();
 }
 
 function notificationStorageKey(name) {
@@ -2487,6 +2476,7 @@ function closeMobileSidebar() {
 }
 
 function setPage(page, options = {}) {
+  if (!['overview', 'finance', 'goals', 'work'].includes(page)) page = 'overview';
   const { closeSidebar = true } = options;
   state.page = page;
   qsa('.view').forEach(view => view.classList.toggle('active', view.id === `view-${page}`));
@@ -3373,8 +3363,9 @@ function bindEvents() {
   qs('#refreshGmailButton')?.addEventListener('click', refreshGmail);
   qs('#sendGmailButton')?.addEventListener('click', sendGmail);
   qs('#notificationButton')?.addEventListener('click', () => qs('#notificationPopout')?.classList.toggle('show'));
+  qs('#privacyToggle')?.addEventListener('click', togglePrivateValues);
   qsa('.nav-item').forEach(item => item.addEventListener('click', () => {
-    const opensSubnav = ['work', 'health', 'home'].includes(item.dataset.page);
+    const opensSubnav = item.dataset.page === 'work';
     setPage(item.dataset.page, { closeSidebar: !opensSubnav });
   }));
   qsa('[data-go]').forEach(item => item.addEventListener('click', () => setPage(item.dataset.go)));
