@@ -39,9 +39,4 @@ O banco fica em JSON na pasta definida por `DATA_DIR`.
 
 No plano gratuito do Render, discos persistentes nao sao aceitos. Por isso o `render.yaml` usa `DATA_DIR=data`, suficiente para testar o app remoto. Para uso real, o ideal e trocar depois para um banco externo ou um plano com disco persistente.
 
-Login inicial:
-
-- Email: `admin@lasttro.local`
-- Senha: `lasttro123`
-
-Depois de subir remoto, troque essa senha.
+O acesso ao app e feito pelo botao **Entrar com Google**. Configure `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` e autorize a URI `https://SEU_DOMINIO/api/auth/google/callback` no cliente OAuth do Google Cloud.

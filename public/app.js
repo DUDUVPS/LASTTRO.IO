@@ -24,7 +24,6 @@ const state = {
   healthKind: 'alimentacao',
   gmailStatus: null,
   gmailMessages: [],
-  authMode: 'login',
   authToken: localStorage.getItem('lasttroToken') || '',
   user: JSON.parse(localStorage.getItem('lasttroUser') || 'null'),
   valuesHidden: localStorage.getItem('lasttroValuesHidden') === 'true',
@@ -168,7 +167,7 @@ async function api(path, options = {}) {
 
   if (!response.ok) {
     const text = await response.text();
-    if (response.status === 401 && !['/api/login', '/api/register', '/api/google-login'].includes(path)) {
+    if (response.status === 401) {
       clearSession();
       showLogin('Sessao encerrada. Entre novamente.');
     }
@@ -255,14 +254,6 @@ async function loadGmailStatus() {
   }
 }
 
-function setSession(payload) {
-  state.authToken = payload.token;
-  state.user = payload.user;
-  localStorage.setItem('lasttroToken', payload.token);
-  localStorage.setItem('lasttroUser', JSON.stringify(payload.user));
-  renderAccountUser();
-}
-
 function clearSession() {
   state.authToken = '';
   state.user = null;
@@ -274,11 +265,6 @@ function clearSession() {
 function showLogin(message = '') {
   qs('#loginScreen').classList.remove('hidden');
   qs('#appShell').classList.add('locked');
-  const form = qs('#loginForm');
-  if (form && state.authMode === 'login') {
-    form.elements.email.value = '';
-    form.elements.password.value = '';
-  }
   setAuthMessage(message);
 }
 
@@ -292,81 +278,6 @@ function setAuthMessage(message, type = 'error') {
   const element = qs('#loginError');
   element.textContent = message;
   element.classList.toggle('success', type === 'success');
-}
-
-function setAuthMode(mode) {
-  state.authMode = mode;
-  const form = qs('#loginForm');
-  form.reset();
-  form.elements.mode.value = mode;
-  form.elements.email.value = '';
-  qsa('.auth-tab').forEach(button => button.classList.toggle('active', button.dataset.authMode === mode));
-  qsa('[data-auth-extra]').forEach(field => {
-    const name = field.dataset.authExtra;
-    field.classList.toggle('hidden', (mode !== 'password' || name !== 'newPassword') && (mode !== 'register' || name !== 'confirmPassword'));
-  });
-
-  const password = form.elements.password;
-  const newPassword = form.elements.newPassword;
-  const confirmPassword = form.elements.confirmPassword;
-  password.placeholder = mode === 'password' ? 'Senha atual' : 'Digite sua senha';
-  password.autocomplete = mode === 'register' ? 'new-password' : 'current-password';
-  newPassword.required = mode === 'password';
-  confirmPassword.required = mode === 'register';
-  if (mode !== 'password') newPassword.value = '';
-  if (mode !== 'register') confirmPassword.value = '';
-  const labels = { login: 'Entrar', register: 'Criar conta', password: 'Trocar senha' };
-  const icons = { login: 'fa-right-to-bracket', register: 'fa-user-plus', password: 'fa-key' };
-  const button = form.querySelector('button[type="submit"]');
-  button.innerHTML = `<i class="fa-solid ${icons[mode]}"></i><span>${labels[mode]}</span>`;
-  setAuthMessage('');
-}
-
-async function submitLogin(event) {
-  event.preventDefault();
-  const button = event.submitter;
-  const form = event.currentTarget;
-  const data = Object.fromEntries(new FormData(form).entries());
-  setAuthMessage('');
-  const mode = data.mode || state.authMode;
-  const labels = { login: 'Entrar', register: 'Criar conta', password: 'Trocar senha' };
-  const icons = { login: 'fa-right-to-bracket', register: 'fa-user-plus', password: 'fa-key' };
-
-  if (mode === 'register' && data.password !== data.confirmPassword) {
-    setAuthMessage('As senhas nao conferem.');
-    return;
-  }
-  button.disabled = true;
-  button.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>Aguarde</span>';
-
-  try {
-    if (mode === 'password') {
-      const loginPayload = await api('/api/login', { method: 'POST', body: JSON.stringify({ email: data.email, password: data.password }) });
-      setSession(loginPayload);
-      await api('/api/change-password', {
-        method: 'POST',
-        body: JSON.stringify({ currentPassword: data.password, newPassword: data.newPassword })
-      });
-      clearSession();
-      setAuthMode('login');
-      form.elements.email.value = data.email;
-      setAuthMessage('Senha trocada. Entre com a nova senha.', 'success');
-      return;
-    }
-
-    const path = mode === 'register' ? '/api/register' : '/api/login';
-    const payload = await api(path, { method: 'POST', body: JSON.stringify(data) });
-    setSession(payload);
-    form.reset();
-    showApp();
-    await loadDashboard();
-  } catch (error) {
-    const message = safeApiError(error.message);
-    setAuthMessage(message || (mode === 'register' ? 'Nao foi possivel criar a conta.' : mode === 'password' ? 'Nao foi possivel trocar a senha.' : 'Email ou senha invalidos.'));
-  } finally {
-    button.disabled = false;
-    button.innerHTML = `<i class="fa-solid ${icons[mode]}"></i><span>${labels[mode]}</span>`;
-  }
 }
 
 function safeApiError(message) {
@@ -399,12 +310,6 @@ function openSettings() {
 
 function closeSettings() {
   qs('#settingsDialog')?.close();
-}
-
-async function openPasswordSettings() {
-  closeSettings();
-  await logout();
-  setAuthMode('password');
 }
 
 async function logoutFromSettings() {
@@ -607,6 +512,7 @@ function renderSummary() {
 
 function renderOverview() {
   const { transacoes, metas, trabalhos, resumo, investimentosCarteira } = state.data;
+  renderAgendaHub();
   renderCategoryChart(resumo.porCategoria);
   renderOverviewInvestmentChart(investimentosCarteira);
 
@@ -722,18 +628,16 @@ function renderFinance() {
 
 function buildAgendaItems() {
   const items = [];
-  (state.data.casa || [])
-    .filter(item => item.tipo === 'conta' && item.status !== 'feito' && item.vencimento)
-    .forEach(item => items.push({ date: item.vencimento, icon: 'fa-file-invoice-dollar', title: item.nome, detail: `Boleto - ${formatMoney(item.valor)}`, page: 'home' }));
-  (state.data.casa || [])
-    .filter(item => item.tipo === 'compra' && item.status !== 'feito' && item.vencimento)
-    .forEach(item => items.push({ date: item.vencimento, icon: 'fa-cart-shopping', title: item.nome, detail: 'Compra pendente', page: 'home' }));
   (state.data.trabalhos || [])
     .filter(item => item.status !== 'concluido' && item.inicio)
     .forEach(item => items.push({ date: item.inicio, icon: 'fa-graduation-cap', title: item.nome, detail: `${item.tipo || 'Faculdade'}${item.disciplina ? ` - ${item.disciplina}` : ''}`, page: 'work' }));
-  (state.data.saude || [])
-    .filter(item => item.data)
-    .forEach(item => items.push({ date: item.data, icon: healthIcon(item.tipo), title: item.nome, detail: `Saude - ${healthLabel(item.tipo)}`, page: 'health' }));
+  state.calendarEvents.forEach(item => items.push({
+    date: item.inicio.includes('T') ? localDateKey(new Date(item.inicio)) : item.inicio,
+    icon: 'fa-calendar-days',
+    title: item.nome,
+    detail: 'Google Agenda',
+    page: 'calendar'
+  }));
 
   return items
     .filter(item => daysBetween(item.date) === null || daysBetween(item.date) >= -1)
@@ -1424,9 +1328,10 @@ function renderAccountsCards() {
   const accounts = items.filter(item => item.tipo === 'conta');
   const cards = items.filter(item => item.tipo === 'cartao');
   const accountBalance = accounts.reduce((sum, item) => sum + Number(item.saldo || 0), 0);
-  const cardUsed = cards.reduce((sum, item) => sum + Number(item.usado || 0), 0);
+  const cardUsed = cards.reduce((sum, item) => sum + Number(item.usado || 0) + cardInstallmentInfo(item).current, 0);
+  const cardCommitted = cards.reduce((sum, item) => sum + Number(item.usado || 0) + cardInstallmentInfo(item).remaining, 0);
   const cardLimit = cards.reduce((sum, item) => sum + Number(item.limite || 0), 0);
-  const availableLimit = Math.max(0, cardLimit - cardUsed);
+  const availableLimit = Math.max(0, cardLimit - cardCommitted);
 
   qs('#accountsOverview').innerHTML = [
     insightTemplate('Saldo em contas', formatMoney(accountBalance), `${accounts.length} contas cadastradas`),
@@ -2221,7 +2126,7 @@ function transactionPaymentMethods(group, type) {
   if (!group) return [];
   const methods = [];
   if (group.account) methods.push({ value: 'debito', label: 'Debito', hint: `Saldo ${formatMoney(group.account.saldo || 0)}` });
-  if (type === 'saida' && group.card) methods.push({ value: 'credito', label: 'Credito', hint: `Fatura ${formatMoney(group.card.usado || 0)}` });
+  if (type === 'saida' && group.card) methods.push({ value: 'credito', label: 'Credito', hint: `Fatura ${formatMoney(Number(group.card.usado || 0) + cardInstallmentInfo(group.card).current)}` });
   return methods;
 }
 
@@ -2278,7 +2183,7 @@ function updateTransactionPaymentOptions() {
   if (!preview) return;
   const method = methodSelect.value;
   const balance = group?.account ? formatMoney(group.account.saldo || 0) : 'sem saldo cadastrado';
-  const invoice = group?.card ? formatMoney(group.card.usado || 0) : 'sem cartao';
+  const invoice = group?.card ? formatMoney(Number(group.card.usado || 0) + cardInstallmentInfo(group.card).current) : 'sem cartao';
   preview.innerHTML = method === 'credito'
     ? `<i class="fa-solid fa-credit-card"></i><span>${escapeHtml(group?.title || 'Banco')} vai receber esta saida na fatura. Fatura atual: <strong>${invoice}</strong>.</span>`
     : `<i class="fa-solid fa-wallet"></i><span>${escapeHtml(group?.title || 'Banco')} vai usar o saldo da conta. Saldo atual: <strong>${balance}</strong>.</span>`;
@@ -2347,10 +2252,11 @@ function accountGroupTemplate(group) {
   const cards = group.cards || [];
   const mainCard = cards[0];
   const balance = Number(account?.saldo || 0);
-  const used = cards.reduce((sum, card) => sum + Number(card.usado || 0), 0);
+  const used = cards.reduce((sum, card) => sum + Number(card.usado || 0) + cardInstallmentInfo(card).current, 0);
+  const committed = cards.reduce((sum, card) => sum + Number(card.usado || 0) + cardInstallmentInfo(card).remaining, 0);
   const limit = cards.reduce((sum, card) => sum + Number(card.limite || 0), 0);
-  const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
-  const available = Math.max(0, limit - used);
+  const pct = limit > 0 ? Math.min(100, Math.round((committed / limit) * 100)) : 0;
+  const available = Math.max(0, limit - committed);
   const title = account?.nome || mainCard?.nome || 'Cartao avulso';
   const detail = account ? account.bandeira : mainCard?.bandeira || 'Cartao de credito';
   const ids = [account, ...cards].filter(Boolean);
@@ -2383,6 +2289,10 @@ function accountGroupTemplate(group) {
             <small>fatura</small>
             <strong>${formatMoney(used)}</strong>
           </div>
+          ${cards.map(card => {
+            const plan = cardInstallmentInfo(card);
+            return plan.total ? `<div class="credit-installment"><span><i class="fa-solid fa-layer-group"></i> Parcelado ${formatMoney(plan.total)} em ${plan.count}x de ${formatMoney(plan.current || plan.average)}</span><small>${plan.paid}/${plan.count} pagas · ${formatMoney(plan.remaining)} ainda comprometidos</small></div>` : '';
+          }).join('')}
           <div class="credit-scale">
             <div><small>0</small><small>${formatMoney(limit).replace('R$', '').trim()}</small></div>
             <div class="progress-line"><span style="width:${pct}%"></span></div>
@@ -2400,6 +2310,19 @@ function accountGroupTemplate(group) {
       </footer>
     </article>
   `;
+}
+
+function cardInstallmentInfo(card) {
+  const total = Math.max(0, moneyValue(card.parceladoTotal || 0));
+  const count = total ? Math.max(1, Number(card.parcelas || 1)) : 0;
+  const paid = Math.min(count, Math.max(0, Number(card.parcelasPagas || 0)));
+  const paidValue = count ? moneyValue(total * paid / count) : 0;
+  return {
+    total, count, paid,
+    average: count ? moneyValue(total / count) : 0,
+    current: count && paid < count ? moneyValue(total * (paid + 1) / count - paidValue) : 0,
+    remaining: moneyValue(total - paidValue)
+  };
 }
 
 function investmentCardTemplate(item) {
@@ -2886,12 +2809,20 @@ function openModal(type, editItem = null) {
         </label>
         <div class="account-edit-grid three">
           ${field('limite', 'Limite total', 'number', card?.limite ?? '0', false)}
-          ${field('usado', 'Fatura atual', 'number', card?.usado ?? '0', false)}
+          ${field('usado', 'Fatura atual sem parcelas', 'number', card?.usado ?? '0', false)}
           ${field('vencimento', 'Vencimento', 'number', card?.vencimento ?? '1', false)}
         </div>
+        <div class="account-edit-title"><i class="fa-solid fa-layer-group"></i><span>Compra parcelada</span></div>
+        <div class="account-edit-grid three">
+          ${field('parceladoTotal', 'Valor total parcelado', 'number', card?.parceladoTotal ?? '0', false)}
+          ${field('parcelas', 'Numero de parcelas', 'number', card?.parcelas ?? '0', false)}
+          ${field('parcelasPagas', 'Parcelas pagas', 'number', card?.parcelasPagas ?? '0', false)}
+        </div>
+        <div class="account-installment-preview" id="accountInstallmentPreview"></div>
       </section>
     `;
     updateAccountCreditMode();
+    updateAccountInstallmentPreview();
   }
 
   if (type === 'investment') {
@@ -2938,7 +2869,7 @@ function openModal(type, editItem = null) {
 }
 
 function field(name, label, type, value, required) {
-  const decimalFields = ['val', 'target', 'atual', 'salario', 'saldo', 'limite', 'usado', 'valor', 'rendimento', 'quantidade', 'minimo', 'calorias', 'duracao'];
+  const decimalFields = ['val', 'target', 'atual', 'salario', 'saldo', 'limite', 'usado', 'valor', 'parceladoTotal', 'rendimento', 'quantidade', 'minimo', 'calorias', 'duracao'];
   const inputType = type === 'number' && decimalFields.includes(name) ? 'text' : type;
   const decimalAttrs = inputType === 'text' && decimalFields.includes(name) ? ' inputmode="decimal"' : '';
   const step = type === 'number' && inputType === 'number' ? ' step="1"' : '';
@@ -2978,7 +2909,7 @@ async function submitModal(event) {
   }
   normalizeFormNumbers(data);
   if (state.modalType === 'account') {
-    await submitBankAccount(data);
+    if (!(await submitBankAccount(data))) return;
     state.editing = null;
     qs('#entityDialog').close();
     await loadDashboard();
@@ -3020,6 +2951,10 @@ async function submitBankAccount(data) {
   const bandeira = String(data.bandeira || nome).trim();
   const groupId = editing.groupId || newGroupId();
   const creditEnabled = data.creditoAtivo === 'true';
+  if (creditEnabled && Number(data.parceladoTotal || 0) > 0 && (!Number.isInteger(Number(data.parcelas)) || Number(data.parcelas) < 1 || Number(data.parcelas) > 120 || !Number.isInteger(Number(data.parcelasPagas)) || Number(data.parcelasPagas) < 0 || Number(data.parcelasPagas) > Number(data.parcelas))) {
+    showToast('Parcelamento invalido', 'Informe de 1 a 120 parcelas e quantas ja foram pagas.');
+    return false;
+  }
   const accountPayload = {
     groupId,
     nome,
@@ -3038,6 +2973,9 @@ async function submitBankAccount(data) {
     saldo: 0,
     limite: data.limite || 0,
     usado: data.usado || 0,
+    parceladoTotal: data.parceladoTotal || 0,
+    parcelas: data.parcelas || 0,
+    parcelasPagas: data.parcelasPagas || 0,
     vencimento: data.vencimento || 1
   };
 
@@ -3049,7 +2987,7 @@ async function submitBankAccount(data) {
 
   if (!creditEnabled) {
     if (editing.cardId) await api(`/api/contas-cartoes/${editing.cardId}`, { method: 'DELETE' });
-    return;
+    return true;
   }
 
   const cardPath = editing.cardId ? `/api/contas-cartoes/${editing.cardId}` : '/api/contas-cartoes';
@@ -3057,10 +2995,11 @@ async function submitBankAccount(data) {
     method: editing.cardId ? 'PUT' : 'POST',
     body: JSON.stringify(cardPayload)
   });
+  return true;
 }
 
 function normalizeFormNumbers(data) {
-  ['val', 'target', 'atual', 'salario', 'saldo', 'limite', 'usado', 'valor'].forEach(key => {
+  ['val', 'target', 'atual', 'salario', 'saldo', 'limite', 'usado', 'valor', 'parceladoTotal'].forEach(key => {
     if (key in data) data[key] = moneyValue(data[key]);
   });
   ['rendimento', 'quantidade', 'minimo', 'calorias', 'duracao'].forEach(key => {
@@ -3073,10 +3012,29 @@ function updateAccountCreditMode() {
   const section = toggle?.closest('.account-edit-section');
   if (!toggle || !section) return;
   const enabled = toggle.checked;
-  qsa('input[name="limite"], input[name="usado"], input[name="vencimento"]', section).forEach(input => {
+  qsa('input[name="limite"], input[name="usado"], input[name="vencimento"], input[name="parceladoTotal"], input[name="parcelas"], input[name="parcelasPagas"]', section).forEach(input => {
     input.disabled = !enabled;
   });
   section.classList.toggle('credit-disabled', !enabled);
+  updateAccountInstallmentPreview();
+}
+
+function updateAccountInstallmentPreview() {
+  const preview = qs('#accountInstallmentPreview');
+  if (!preview) return;
+  const total = moneyValue(qs('[name="parceladoTotal"]')?.value || 0);
+  const count = Math.trunc(Number(qs('[name="parcelas"]')?.value || 0));
+  const paid = Math.trunc(Number(qs('[name="parcelasPagas"]')?.value || 0));
+  if (!qs('#accountCreditToggle')?.checked || total <= 0) {
+    preview.textContent = 'Sem compra parcelada cadastrada.';
+    return;
+  }
+  if (count < 1 || paid < 0 || paid > count) {
+    preview.textContent = 'Informe o numero de parcelas e as parcelas pagas.';
+    return;
+  }
+  const plan = cardInstallmentInfo({ parceladoTotal: total, parcelas: count, parcelasPagas: paid });
+  preview.textContent = `${count}x de ${formatMoney(plan.average)} · ${formatMoney(plan.remaining)} comprometidos no limite · ${formatMoney(plan.current)} na fatura atual`;
 }
 
 function updateStudySubjectMode() {
@@ -3386,13 +3344,15 @@ async function sendGmail() {
 }
 
 function bindEvents() {
-  qs('#loginForm').addEventListener('submit', submitLogin);
   qs('#googleLoginButton').addEventListener('click', loginWithGoogle);
-  qsa('.auth-tab').forEach(button => button.addEventListener('click', () => setAuthMode(button.dataset.authMode)));
   qs('#accountButton')?.addEventListener('click', openSettings);
   qs('#closeSettingsButton')?.addEventListener('click', closeSettings);
   qs('#settingsLogoutButton')?.addEventListener('click', logoutFromSettings);
-  qs('#settingsChangePasswordButton')?.addEventListener('click', openPasswordSettings);
+  qs('#mobileTransactionAction')?.addEventListener('click', () => {
+    setPage('finance');
+    setFinanceTab('movements');
+    openModal('transaction');
+  });
   qs('#profilePhotoInput')?.addEventListener('change', changeProfilePhoto);
   qs('#removeProfilePhotoButton')?.addEventListener('click', removeProfilePhoto);
   qs('#exportBackupButton')?.addEventListener('click', exportBackup);
@@ -3417,6 +3377,10 @@ function bindEvents() {
     setPage(item.dataset.page, { closeSidebar: !opensSubnav });
   }));
   qsa('[data-go]').forEach(item => item.addEventListener('click', () => setPage(item.dataset.go)));
+  qs('#agendaList')?.addEventListener('click', event => {
+    const item = event.target.closest('[data-go]');
+    if (item) setPage(item.dataset.go);
+  });
   qsa('[data-modal]').forEach(button => button.addEventListener('click', event => {
     event.stopPropagation();
     if (button.dataset.modal === 'work') state.workKind = button.dataset.workKind || (state.workTab === 'estudos' ? 'Estudo' : 'Trabalho');
@@ -3496,6 +3460,7 @@ function bindEvents() {
   });
   qs('#entityForm').addEventListener('input', event => {
     if (state.modalType === 'bankWithdraw' && event.target.name === 'valor') updateWithdrawSimulation();
+    if (state.modalType === 'account' && ['parceladoTotal', 'parcelas', 'parcelasPagas'].includes(event.target.name)) updateAccountInstallmentPreview();
   });
 
   document.body.addEventListener('dragstart', event => {

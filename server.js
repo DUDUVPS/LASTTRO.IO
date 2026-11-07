@@ -526,6 +526,9 @@ function getUserData(db, email) {
 
 function normalizeAccountCard(item) {
   const groupId = String(item.groupId || '').trim();
+  const parceladoTotal = Math.max(0, moneyValue(item.parceladoTotal));
+  const parcelas = parceladoTotal > 0 ? Math.min(120, Math.max(1, Math.trunc(parseDecimal(item.parcelas, 1)))) : 0;
+  const parcelasPagas = Math.min(parcelas, Math.max(0, Math.trunc(parseDecimal(item.parcelasPagas, 0))));
   return {
     id: item.id || crypto.randomUUID(),
     groupId: groupId || item.id || crypto.randomUUID(),
@@ -535,8 +538,19 @@ function normalizeAccountCard(item) {
     saldo: moneyValue(item.saldo),
     limite: moneyValue(item.limite),
     usado: moneyValue(item.usado),
+    parceladoTotal,
+    parcelas,
+    parcelasPagas,
     vencimento: parseDecimal(item.vencimento, 1)
   };
+}
+
+function currentInstallment(card) {
+  const total = moneyValue(card.parceladoTotal);
+  const count = Number(card.parcelas || 0);
+  const paid = Number(card.parcelasPagas || 0);
+  if (!total || !count || paid >= count) return 0;
+  return moneyValue(total * (paid + 1) / count - moneyValue(total * paid / count));
 }
 
 function normalizeGoal(item) {
@@ -649,7 +663,7 @@ function buildResumo(db) {
     .reduce((s, r) => s + Number(r.totalDevolver || 0), 0);
   const cartoesTotal = db.contasCartoes
     .filter(c => c.tipo === 'cartao')
-    .reduce((s, c) => s + Number(c.usado || 0), 0);
+    .reduce((s, c) => s + Number(c.usado || 0) + currentInstallment(c), 0);
   const contasSaldo = db.contasCartoes
     .filter(c => c.tipo === 'conta')
     .reduce((s, c) => s + Number(c.saldo || 0), 0);
@@ -768,34 +782,6 @@ async function handleApi(req, res, pathname) {
     return sendHtml(res, 200, googleCallbackHtml({ token, user: publicUser(user) }));
   }
 
-  if (req.method === 'POST' && pathname === '/api/login') {
-    const body = await readBody(req);
-    const email = normalizeEmail(body.email || body.username);
-    const user = db.auth.users.find(item => item.email === email);
-    if (user && hashPassword(body.password) === user.passwordHash) {
-      const token = createSession(user.email);
-      return send(res, 200, { token, user: publicUser(user) });
-    }
-    return send(res, 401, { error: 'Email ou senha invalidos' });
-  }
-
-  if (req.method === 'POST' && pathname === '/api/register') {
-    const body = await readBody(req);
-    const email = normalizeEmail(body.email || body.username);
-    const password = String(body.password || '');
-    if (!isValidEmail(email)) return send(res, 400, { error: 'Informe um email valido' });
-    if (password.length < 6) return send(res, 400, { error: 'Senha precisa ter pelo menos 6 caracteres' });
-    if (db.auth.users.some(user => user.email === email)) {
-      return send(res, 409, { error: 'Email ja cadastrado' });
-    }
-    const user = { email, username: email, passwordHash: hashPassword(password), avatar: '' };
-    db.auth.users.push(user);
-    db.accountsData[email] = blankUserData();
-    await writeDb(db);
-    const token = createSession(user.email);
-    return send(res, 201, { token, user: publicUser(user) });
-  }
-
   if (req.method === 'POST' && pathname === '/api/google-login') {
     return send(res, 200, { url: '/api/auth/google' });
   }
@@ -842,21 +828,6 @@ async function handleApi(req, res, pathname) {
 
   if (!isAuthenticated(req)) {
     return send(res, 401, { error: 'Login necessario' });
-  }
-
-  if (req.method === 'POST' && pathname === '/api/change-password') {
-    const body = await readBody(req);
-    const email = getSessionUser(req);
-    const user = db.auth.users.find(item => item.email === email);
-    const currentPassword = String(body.currentPassword || '');
-    const newPassword = String(body.newPassword || '');
-    if (!user) return send(res, 404, { error: 'Usuario nao encontrado' });
-    if (hashPassword(currentPassword) !== user.passwordHash) return send(res, 401, { error: 'Senha atual incorreta' });
-    if (newPassword.length < 6) return send(res, 400, { error: 'Nova senha precisa ter pelo menos 6 caracteres' });
-    user.passwordHash = hashPassword(newPassword);
-    if (db.auth.email === user.email || db.auth.username === user.email) db.auth.passwordHash = user.passwordHash;
-    await writeDb(db);
-    return send(res, 200, { ok: true });
   }
 
   const userEmail = getSessionUser(req);

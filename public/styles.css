@@ -1998,6 +1998,14 @@ button { border: 0; cursor: pointer; }
   gap: 8px;
 }
 
+.credit-installment { display: grid; gap: 5px; padding: 10px 0; border-top: 1px solid var(--line); }
+.credit-installment span { color: var(--text); font-size: 13px; font-weight: 700; }
+.credit-installment i { color: var(--blue); margin-right: 5px; }
+.credit-installment small, .account-installment-preview { color: var(--muted); font-size: 12px; }
+.account-installment-preview { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: rgba(74,158,255,.06); }
+
+.mobile-transaction-action { display: none; }
+
 .credit-scale .progress-line {
   height: 8px;
   margin-top: 0;
@@ -3474,6 +3482,23 @@ input:focus, select:focus, textarea:focus { border-color: rgba(74,158,255,.45); 
 }
 
 @media (max-width: 560px) {
+  .mobile-transaction-action {
+    position: fixed;
+    right: 18px;
+    bottom: calc(18px + env(safe-area-inset-bottom));
+    z-index: 5;
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 50%;
+    color: #fff;
+    background: var(--blue);
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    font-size: 20px;
+  }
+  .app.locked ~ .mobile-transaction-action { display: none; }
   .topbar { padding: 0 14px; }
   .topbar-actions span, .primary-button span, .ghost-button span { display: none; }
   .topbar-actions { gap: 6px; }

@@ -28,30 +28,8 @@
         <img src="/assets/logo-nome.png?v=4" alt="LASTTRO">
         <span>gestao pessoal</span>
       </div>
-      <div class="auth-tabs">
-        <button class="auth-tab active" data-auth-mode="login" type="button">Entrar</button>
-        <button class="auth-tab" data-auth-mode="register" type="button">Criar conta</button>
-        <button class="auth-tab" data-auth-mode="password" type="button">Trocar senha</button>
-      </div>
-      <form id="loginForm" class="login-form" autocomplete="off">
-        <input name="mode" type="hidden" value="login">
-        <label>Email
-          <input name="email" type="email" autocomplete="off" placeholder="seu@email.com" required>
-        </label>
-        <label>Senha
-          <input name="password" type="password" autocomplete="current-password" placeholder="Digite sua senha" required>
-        </label>
-        <label class="auth-extra hidden" data-auth-extra="newPassword">Nova senha
-          <input name="newPassword" type="password" autocomplete="new-password" placeholder="Minimo 6 caracteres">
-        </label>
-        <label class="auth-extra hidden" data-auth-extra="confirmPassword">Confirmar senha
-          <input name="confirmPassword" type="password" autocomplete="new-password" placeholder="Repita a senha">
-        </label>
-        <p class="form-error" id="loginError"></p>
-        <button class="primary-button" type="submit"><i class="fa-solid fa-right-to-bracket"></i><span>Entrar</span></button>
-        <button class="google-button" id="googleLoginButton" type="button"><i class="fa-brands fa-google"></i><span>Entrar com Google</span></button>
-        <a class="login-link" href="/">Conhecer o projeto</a>
-      </form>
+      <p class="form-error" id="loginError"></p>
+      <button class="google-button" id="googleLoginButton" type="button"><i class="fa-brands fa-google"></i><span>Entrar com Google</span></button>
     </div>
   </section>
 
@@ -106,6 +84,13 @@
 
       <section class="content">
         <div class="view active" id="view-overview">
+          <section class="agenda-panel overview-agenda">
+            <div class="panel-title-row">
+              <div><div class="section-kicker">Calendario</div><div class="panel-title">Proximos compromissos</div></div>
+              <span id="agendaCount">0 itens</span>
+            </div>
+            <div id="agendaList" class="agenda-list"></div>
+          </section>
           <section class="cashflow">
             <div class="section-kicker">Fluxo de caixa</div>
             <div class="cashflow-grid">
@@ -491,6 +476,7 @@
     </main>
   </div>
 
+  <button class="mobile-transaction-action" id="mobileTransactionAction" type="button" aria-label="Adicionar movimentacao" title="Adicionar movimentacao"><i class="fa-solid fa-plus"></i></button>
   <div class="overlay" id="overlay"></div>
   <div class="notification-popout" id="notificationPopout"></div>
   <div class="toast-stack" id="toastStack"></div>
@@ -535,10 +521,6 @@
           <i class="fa-solid fa-house"></i>
           <span><strong>Pagina inicial</strong><small>Ver apresentacao do projeto</small></span>
         </a>
-        <button class="settings-row" id="settingsChangePasswordButton" type="button">
-          <i class="fa-solid fa-key"></i>
-          <span><strong>Trocar senha</strong><small>Sair e abrir tela de troca de senha</small></span>
-        </button>
         <button class="settings-row" id="exportBackupButton" type="button">
           <i class="fa-solid fa-download"></i>
           <span><strong>Backup dos dados</strong><small>Baixar JSON completo da sua conta</small></span>
