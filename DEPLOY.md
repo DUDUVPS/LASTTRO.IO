@@ -20,6 +20,12 @@ VAPID_SUBJECT=mailto:seu_email@gmail.com
 O LASTTRO usa MySQL quando encontra `MYSQL_URL` ou `DATABASE_URL`. No Railway, use a referencia de variavel do servico MySQL.
 As notificacoes reais no celular usam as chaves `VAPID_*`. Gere uma vez com `npx web-push generate-vapid-keys` e salve no Railway.
 
+### Google Agenda
+
+No mesmo projeto Google Cloud usado pelo login, ative a **Google Calendar API** em APIs e servicos. Em Google Auth Platform > Acesso a dados, adicione o escopo `https://www.googleapis.com/auth/calendar.events.readonly`. O botao **Conectar Google Agenda** usa o cliente OAuth e a URI de retorno ja configurados para o login: `https://SEU_DOMINIO/api/auth/google/callback`. Se o app estiver em modo de teste, adicione o email que vai conectar em **Publico-alvo > Usuarios de teste**. A conexao le eventos do calendario principal; nao altera eventos na conta Google.
+
+Para ver esses mesmos eventos no Calendario Samsung, adicione a conta Google no celular e ative a sincronizacao do Calendario. Eventos salvos somente na conta Samsung nao aparecem na API do Google.
+
 5. O Railway vai usar `railway.json` e `package.json` para iniciar o app.
 
 ## Render

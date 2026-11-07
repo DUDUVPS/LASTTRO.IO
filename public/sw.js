@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lasttro-pwa-v5';
+const CACHE_NAME = 'lasttro-pwa-v6';
 const APP_SHELL = [
   '/',
   '/app',

@@ -67,6 +67,7 @@
         <button class="nav-item" data-page="finance"><i class="fa-regular fa-credit-card"></i><span>Financeiro</span></button>
         <button class="nav-item" data-page="goals"><i class="fa-regular fa-circle-dot"></i><span>Metas</span></button>
         <button class="nav-item" data-page="work"><i class="fa-solid fa-graduation-cap"></i><span>Faculdade</span></button>
+        <button class="nav-item" data-page="calendar"><i class="fa-regular fa-calendar-days"></i><span>Calendario</span></button>
         <div class="nav-sub" id="workSubnav">
           <button class="nav-sub-item active" data-work-nav="tarefas"><i class="fa-solid fa-table-columns"></i><span>Tarefas</span></button>
           <button class="nav-sub-item" data-work-nav="estudos"><i class="fa-solid fa-book-open-reader"></i><span>Estudos</span></button>
@@ -255,6 +256,9 @@
           </div>
 
           <div class="finance-panel" id="finance-tab-movements">
+            <div class="movement-period">
+              <label>Mes das movimentacoes<input id="transactionMonth" type="month"></label>
+            </div>
             <section class="finance-insights" id="financeInsights"></section>
 
             <section class="report-panel">
@@ -380,13 +384,6 @@
           </section>
           <section class="work-overview" id="workOverview"></section>
           <section class="work-panel active" id="work-tab-tarefas">
-            <section class="academic-calendar-panel">
-              <div class="list-header">
-                <span>Calendario academico</span>
-                <span>Proximos prazos</span>
-              </div>
-              <div id="academicCalendar" class="academic-calendar"></div>
-            </section>
             <section class="work-board kanban-board">
               <article class="kanban-column" data-work-status="ativo">
                 <div class="panel-title">Pendente</div>
@@ -411,6 +408,22 @@
             <section class="study-subjects" id="studySubjects"></section>
             <div id="studyList" class="study-grid"></div>
           </section>
+        </div>
+
+        <div class="view" id="view-calendar">
+          <section class="section-head">
+            <div><h2>Calendario</h2><p>Seus compromissos e prazos em um so lugar.</p></div>
+            <button class="pill-button" id="connectCalendarButton" type="button"><i class="fa-brands fa-google"></i><span>Conectar Google Agenda</span></button>
+          </section>
+          <div class="calendar-toolbar">
+            <button class="icon-button" id="previousCalendarMonth" type="button" aria-label="Mes anterior"><i class="fa-solid fa-chevron-left"></i></button>
+            <strong id="calendarMonthLabel"></strong>
+            <button class="icon-button" id="nextCalendarMonth" type="button" aria-label="Proximo mes"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+          <p class="calendar-connection" id="calendarConnection"></p>
+          <div id="generalCalendar" class="academic-calendar"></div>
+          <div class="list-header"><span>Compromissos do mes</span><span id="calendarEventCount"></span></div>
+          <div id="generalCalendarEvents" class="calendar-event-list"></div>
         </div>
 
         <div class="view" id="view-email">

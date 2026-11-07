@@ -9,6 +9,10 @@ const state = {
   transactionCategory: 'todas',
   transactionSearch: '',
   transactionSort: 'recent',
+  transactionMonth: monthKey(),
+  calendarMonth: monthKey(),
+  calendarStatus: { connected: false },
+  calendarEvents: [],
   chart: null,
   overviewInvestmentChart: null,
   investmentChart: null,
@@ -34,7 +38,8 @@ const pages = {
   work: { title: 'Faculdade', subtitle: 'provas, trabalhos e anotacoes' },
   health: { title: 'Saude', subtitle: 'alimentacao, treino e evolucao' },
   home: { title: 'Casa', subtitle: 'despensa, contas e compras' },
-  email: { title: 'Email', subtitle: 'atalhos e mensagens pelo Gmail' }
+  email: { title: 'Email', subtitle: 'atalhos e mensagens pelo Gmail' },
+  calendar: { title: 'Calendario', subtitle: 'agenda pessoal e faculdade' }
 };
 
 const categoryColors = ['#ff7a45', '#d946ef', '#8b6fff', '#f0b43c', '#4a9eff', '#a855f7'];
@@ -181,14 +186,16 @@ async function loadDashboard() {
     localStorage.setItem('lasttroUser', JSON.stringify(state.user));
   }
   await loadGmailStatus();
+  await loadCalendarEvents();
   renderAll();
   applyUrlShortcut();
 }
 
 function applyUrlShortcut() {
   if (state.shortcutApplied) return;
-  const shortcut = new URLSearchParams(window.location.search).get('atalho');
-  if (!shortcut) return;
+  const params = new URLSearchParams(window.location.search);
+  const shortcut = params.get('atalho');
+  if (!shortcut && params.get('calendar') !== 'connected') return;
   state.shortcutApplied = true;
   if (shortcut === 'financeiro') setPage('finance');
   if (shortcut === 'hoje') setPage('overview');
@@ -197,6 +204,39 @@ function applyUrlShortcut() {
     setFinanceTab('movements');
     openModal('transaction');
   }
+  if (params.get('calendar') === 'connected') setPage('calendar');
+}
+
+async function loadCalendarEvents() {
+  try {
+    state.calendarStatus = await api('/api/calendar/status');
+    if (state.calendarStatus.connected) {
+      const payload = await api(`/api/calendar/events?month=${state.calendarMonth}`);
+      state.calendarEvents = payload.events || [];
+    } else {
+      state.calendarEvents = [];
+    }
+  } catch (error) {
+    state.calendarEvents = [];
+    state.calendarStatus = { connected: false, error: safeApiError(error.message) || 'Falha ao carregar o calendario' };
+  }
+}
+
+async function connectCalendar() {
+  try {
+    const { url } = await api('/api/auth/calendar-url');
+    window.location.href = url;
+  } catch (error) {
+    showToast('Google Agenda', safeApiError(error.message));
+  }
+}
+
+async function changeCalendarMonth(amount) {
+  state.calendarMonth = shiftMonth(state.calendarMonth, amount);
+  state.calendarDate = '';
+  await loadCalendarEvents();
+  renderGeneralCalendar();
+  markPrivateValues();
 }
 
 async function loadGmailStatus() {
@@ -521,6 +561,7 @@ function renderAll() {
   renderFinance();
   renderGoals();
   renderWork();
+  renderGeneralCalendar();
   renderHealth();
   renderHome();
   renderEmail();
@@ -570,7 +611,7 @@ function renderOverview() {
   renderOverviewInvestmentChart(investimentosCarteira);
 
   qs('#goalPreview').innerHTML = metas.slice(0, 3).map(goalMiniTemplate).join('') || emptyTemplate('Nenhuma meta cadastrada.');
-  qs('#latestTransactions').innerHTML = transacoes.slice(0, 4).map(transactionMiniTemplate).join('') || emptyTemplate('Nenhuma movimentacao registrada.');
+  qs('#latestTransactions').innerHTML = monthTransactions(monthKey()).slice(0, 4).map(transactionMiniTemplate).join('') || emptyTemplate('Nenhuma movimentacao neste mes.');
   qs('#workPreview').innerHTML = trabalhos
     .filter(work => work.status !== 'concluido')
     .slice(0, 3)
@@ -657,7 +698,8 @@ function renderFinance() {
   renderBank();
 
   const list = qs('#transactionsList');
-  const movementTransactions = state.data.transacoes.filter(item => item.tipo !== 'investimento');
+  const movementTransactions = monthTransactions(state.transactionMonth);
+  qs('#transactionMonth').value = state.transactionMonth;
   const base = state.transactionFilter === 'todos'
     ? movementTransactions
     : movementTransactions.filter(item => item.tipo === state.transactionFilter);
@@ -673,7 +715,7 @@ function renderFinance() {
   renderMovementCategories(base);
   qs('#transactionsCount').textContent = `${filtered.length} ${filtered.length === 1 ? 'transacao' : 'transacoes'}`;
   qs('#transactionsTotal').textContent = formatMoney(total);
-  list.innerHTML = filtered.map(transactionCardTemplate).join('') || emptyTemplate('Nenhuma transacao nesta categoria.');
+  list.innerHTML = filtered.map(transactionCardTemplate).join('') || emptyTemplate('Nenhuma movimentacao neste mes. Selecione outro mes para consultar o historico.');
   renderMonthlyStatements();
   markPrivateValues();
 }
@@ -1305,7 +1347,7 @@ function reportCardTemplate(label, value, detail, type = '') {
 }
 
 function renderFinanceReport() {
-  const currentMonth = monthKey();
+  const currentMonth = state.transactionMonth;
   const previousMonth = shiftMonth(currentMonth, -1);
   const current = monthReport(currentMonth);
   const previous = monthReport(previousMonth);
@@ -1359,12 +1401,16 @@ function renderMonthlyTrendChart(currentMonth) {
 }
 
 function renderFinanceInsights() {
-  const transactions = state.data.transacoes;
+  const transactions = monthTransactions(state.transactionMonth);
   const expenses = transactions.filter(item => item.tipo === 'saida');
   const incomes = transactions.filter(item => item.tipo === 'entrada');
   const biggestExpense = [...expenses].sort((a, b) => Math.abs(b.val) - Math.abs(a.val))[0];
   const biggestIncome = [...incomes].sort((a, b) => Math.abs(b.val) - Math.abs(a.val))[0];
-  const topCategory = [...state.data.resumo.porCategoria].sort((a, b) => b.valor - a.valor)[0];
+  const byCategory = expenses.reduce((totals, item) => {
+    totals[item.cat] = (totals[item.cat] || 0) + Math.abs(Number(item.val || 0));
+    return totals;
+  }, {});
+  const topCategory = Object.entries(byCategory).map(([nome, valor]) => ({ nome, valor })).sort((a, b) => b.valor - a.valor)[0];
 
   qs('#financeInsights').innerHTML = [
     insightTemplate('Maior gasto', biggestExpense?.nome || 'Sem gastos', biggestExpense ? `${biggestExpense.cat} · ${formatMoney(Math.abs(biggestExpense.val))}` : 'Nada registrado'),
@@ -1613,7 +1659,6 @@ function renderWork() {
   `;
   qs('#studySubjects').innerHTML = studySubjectsTemplate(studySubjects, studies);
   qs('#studyList').innerHTML = studies.map(studyCardTemplate).join('') || emptyTemplate('Nenhum estudo registrado.');
-  renderAcademicCalendar(academicTasks);
 }
 
 function renderHealth() {
@@ -1964,46 +2009,40 @@ function shoppingChecklistRows(items = []) {
   `).join('');
 }
 
-function renderAcademicCalendar(works) {
-  const container = qs('#academicCalendar');
-  if (!container) return;
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const startOffset = firstDay.getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const monthItems = works.filter(item => {
-    if (!item.inicio) return false;
-    const date = new Date(`${item.inicio}T00:00:00`);
-    return date.getFullYear() === year && date.getMonth() === month;
-  });
-  const byDay = monthItems.reduce((acc, item) => {
-    const day = new Date(`${item.inicio}T00:00:00`).getDate();
-    if (!acc[day]) acc[day] = [];
-    acc[day].push(item);
-    return acc;
-  }, {});
-  const cells = [];
-  for (let i = 0; i < startOffset; i += 1) cells.push('<span class="calendar-day empty-day"></span>');
+function renderGeneralCalendar() {
+  const [year, month] = state.calendarMonth.split('-').map(Number);
+  const tasks = (state.data.trabalhos || [])
+    .filter(item => academicKind(item) !== 'estudo' && String(item.inicio || '').startsWith(state.calendarMonth))
+    .map(item => ({ date: item.inicio, nome: item.nome, source: 'Faculdade', link: '' }));
+  const google = state.calendarEvents.map(item => ({
+    date: item.inicio.includes('T') ? localDateKey(new Date(item.inicio)) : item.inicio,
+    nome: item.nome,
+    source: 'Google Agenda',
+    link: item.link
+  })).filter(item => item.date.startsWith(state.calendarMonth));
+  const events = [...tasks, ...google].sort((a, b) => a.date.localeCompare(b.date));
+  const firstDay = new Date(year, month - 1, 1);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const cells = Array.from({ length: firstDay.getDay() }, () => '<span class="calendar-day empty-day"></span>');
   for (let day = 1; day <= daysInMonth; day += 1) {
-    const items = byDay[day] || [];
-    const isToday = day === today.getDate();
-    cells.push(`
-      <button class="calendar-day ${isToday ? 'today' : ''} ${items.length ? 'has-items' : ''}" type="button" title="${items.map(item => item.nome).join(', ')}">
-        <strong>${day}</strong>
-        <span>${items.slice(0, 2).map(item => escapeHtml(item.tipo)).join(' · ')}</span>
-      </button>
-    `);
+    const date = `${state.calendarMonth}-${String(day).padStart(2, '0')}`;
+    const daily = events.filter(item => item.date === date);
+    cells.push(`<button class="calendar-day ${date === localDateKey() ? 'today' : ''} ${daily.length ? 'has-items' : ''} ${state.calendarDate === date ? 'selected' : ''}" type="button" data-calendar-date="${date}" aria-label="${day} de ${monthLabel(state.calendarMonth)}: ${daily.length} eventos">
+      <strong>${day}</strong><span>${daily.slice(0, 2).map(item => escapeHtml(item.nome)).join(' · ')}</span>
+    </button>`);
   }
-  container.innerHTML = `
-    <div class="calendar-month-head">
-      <strong>${today.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</strong>
-      <span>${monthItems.length} prazos no mes</span>
-    </div>
-    <div class="calendar-weekdays"><span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sab</span></div>
-    <div class="calendar-month-grid">${cells.join('')}</div>
-  `;
+  qs('#calendarMonthLabel').textContent = firstDay.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  qs('#generalCalendar').innerHTML = `<div class="calendar-weekdays"><span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sab</span></div><div class="calendar-month-grid">${cells.join('')}</div>`;
+  const visible = state.calendarDate ? events.filter(item => item.date === state.calendarDate) : events;
+  qs('#calendarEventCount').textContent = `${visible.length} ${visible.length === 1 ? 'evento' : 'eventos'}`;
+  qs('#generalCalendarEvents').innerHTML = visible.map(item => {
+    const label = `<strong>${escapeHtml(item.nome)}</strong><small>${escapeHtml(formatDatePt(item.date))} · ${escapeHtml(item.source)}</small>`;
+    const validLink = /^https:\/\/(calendar\.google\.com|www\.google\.com)\//.test(item.link || '');
+    return validLink ? `<a class="calendar-event" href="${escapeHtml(item.link)}" target="_blank" rel="noopener noreferrer">${label}<i class="fa-solid fa-arrow-up-right-from-square"></i></a>` : `<div class="calendar-event">${label}</div>`;
+  }).join('') || emptyTemplate('Nenhum compromisso neste periodo.');
+  const status = state.calendarStatus;
+  qs('#calendarConnection').textContent = status.error || (status.connected ? `Google Agenda conectado: ${status.email}` : 'Conecte o Google Agenda para ver seus eventos aqui. Eventos salvos na conta Google tambem podem aparecer no Calendario Samsung.');
+  qs('#connectCalendarButton span').textContent = status.connected ? 'Trocar conta Google' : 'Conectar Google Agenda';
 }
 
 function academicKind(work) {
@@ -2476,7 +2515,7 @@ function closeMobileSidebar() {
 }
 
 function setPage(page, options = {}) {
-  if (!['overview', 'finance', 'goals', 'work'].includes(page)) page = 'overview';
+  if (!['overview', 'finance', 'goals', 'work', 'calendar'].includes(page)) page = 'overview';
   const { closeSidebar = true } = options;
   state.page = page;
   qsa('.view').forEach(view => view.classList.toggle('active', view.id === `view-${page}`));
@@ -3363,6 +3402,15 @@ function bindEvents() {
   qs('#refreshGmailButton')?.addEventListener('click', refreshGmail);
   qs('#sendGmailButton')?.addEventListener('click', sendGmail);
   qs('#notificationButton')?.addEventListener('click', () => qs('#notificationPopout')?.classList.toggle('show'));
+  qs('#connectCalendarButton')?.addEventListener('click', connectCalendar);
+  qs('#previousCalendarMonth')?.addEventListener('click', () => changeCalendarMonth(-1));
+  qs('#nextCalendarMonth')?.addEventListener('click', () => changeCalendarMonth(1));
+  qs('#generalCalendar')?.addEventListener('click', event => {
+    const day = event.target.closest('[data-calendar-date]');
+    if (!day) return;
+    state.calendarDate = state.calendarDate === day.dataset.calendarDate ? '' : day.dataset.calendarDate;
+    renderGeneralCalendar();
+  });
   qs('#privacyToggle')?.addEventListener('click', togglePrivateValues);
   qsa('.nav-item').forEach(item => item.addEventListener('click', () => {
     const opensSubnav = item.dataset.page === 'work';
@@ -3416,6 +3464,12 @@ function bindEvents() {
 
   qs('#transactionSort').addEventListener('change', event => {
     state.transactionSort = event.target.value;
+    renderFinance();
+  });
+  qs('#transactionMonth').addEventListener('change', event => {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(event.target.value)) return;
+    state.transactionMonth = event.target.value;
+    state.transactionCategory = 'todas';
     renderFinance();
   });
 

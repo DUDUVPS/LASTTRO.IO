@@ -244,6 +244,7 @@ function normalizeUser(user = {}) {
     passwordHash: user.passwordHash || '',
     avatar: typeof user.avatar === 'string' ? user.avatar : '',
     gmail: user.gmail && typeof user.gmail === 'object' ? user.gmail : null,
+    calendar: user.calendar && typeof user.calendar === 'object' ? user.calendar : null,
     pushSubscriptions: Array.isArray(user.pushSubscriptions) ? user.pushSubscriptions : [],
     lastPushSentAt: Number(user.lastPushSentAt || 0),
     lastPushTitle: String(user.lastPushTitle || '')
@@ -432,21 +433,25 @@ function applyTransactionAccountEffect(data, transaction, direction = 1) {
   }
 }
 
-async function refreshGmailAccessToken(user) {
-  if (!user?.gmail) throw new Error('Gmail nao conectado');
-  if (user.gmail.accessToken && Number(user.gmail.expiresAt || 0) > Date.now() + 60_000) {
-    return user.gmail.accessToken;
+async function refreshGoogleAccessToken(credentials) {
+  if (credentials.accessToken && Number(credentials.expiresAt || 0) > Date.now() + 60_000) {
+    return credentials.accessToken;
   }
-  if (!user.gmail.refreshToken) throw new Error('Reconecte o Gmail');
+  if (!credentials.refreshToken) throw new Error('Reconecte a conta Google');
   const payload = await postForm('https://oauth2.googleapis.com/token', {
     client_id: GOOGLE_CLIENT_ID,
     client_secret: GOOGLE_CLIENT_SECRET,
-    refresh_token: user.gmail.refreshToken,
+    refresh_token: credentials.refreshToken,
     grant_type: 'refresh_token'
   });
-  user.gmail.accessToken = payload.access_token;
-  user.gmail.expiresAt = Date.now() + Number(payload.expires_in || 3600) * 1000;
-  return user.gmail.accessToken;
+  credentials.accessToken = payload.access_token;
+  credentials.expiresAt = Date.now() + Number(payload.expires_in || 3600) * 1000;
+  return credentials.accessToken;
+}
+
+async function refreshGmailAccessToken(user) {
+  if (!user?.gmail) throw new Error('Gmail nao conectado');
+  return refreshGoogleAccessToken(user.gmail);
 }
 
 async function gmailRequest(user, endpoint, options = {}) {
@@ -631,9 +636,12 @@ function normalizeHomeItem(item) {
 }
 
 function buildResumo(db) {
-  const entradas = db.transacoes.filter(t => t.tipo === 'entrada').reduce((s, t) => s + t.val, 0);
+  const monthParts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit' }).formatToParts(new Date());
+  const currentMonth = `${monthParts.find(part => part.type === 'year').value}-${monthParts.find(part => part.type === 'month').value}`;
+  const monthTransactions = db.transacoes.filter(t => String(t.data || '').startsWith(currentMonth));
+  const entradas = monthTransactions.filter(t => t.tipo === 'entrada').reduce((s, t) => s + t.val, 0);
   const investimentos = db.transacoes.filter(t => t.tipo === 'investimento').reduce((s, t) => s + t.val, 0);
-  const gastos = Math.abs(db.transacoes.filter(t => t.tipo === 'saida').reduce((s, t) => s + t.val, 0));
+  const gastos = Math.abs(monthTransactions.filter(t => t.tipo === 'saida').reduce((s, t) => s + t.val, 0));
   const carteiraInvestimentos = db.investimentosCarteira.reduce((s, i) => s + Number(i.valor || 0), 0);
   const bancoSaldo = Number(db.banco?.saldo || 0);
   const bancoAberto = (db.banco?.retiradas || [])
@@ -654,7 +662,7 @@ function buildResumo(db) {
     .reduce((s, j) => s + Number(j.horas || 0), 0);
   const patrimonio = bancoSaldo + contasSaldo + carteiraInvestimentos;
   const disponivelTotal = contasSaldo + bancoSaldo;
-  const porCategoria = db.transacoes
+  const porCategoria = monthTransactions
     .filter(t => t.tipo === 'saida')
     .reduce((acc, t) => {
       acc[t.cat] = (acc[t.cat] || 0) + Math.abs(t.val);
@@ -729,19 +737,20 @@ async function handleApi(req, res, pathname) {
     const email = normalizeEmail(profile.email);
     if (!email || profile.email_verified === false) return sendHtml(res, 401, 'Email Google nao verificado.');
 
-    if (stateData.mode === 'gmail') {
+    if (stateData.mode === 'gmail' || stateData.mode === 'calendar') {
       const sessionEmail = normalizeEmail(stateData.email);
       const user = db.auth.users.find(item => item.email === sessionEmail);
       if (!user) return sendHtml(res, 404, 'Usuario nao encontrado.');
-      user.gmail = {
+      const service = stateData.mode;
+      user[service] = {
         email,
         accessToken: tokenPayload.access_token,
-        refreshToken: tokenPayload.refresh_token || user.gmail?.refreshToken || '',
+        refreshToken: tokenPayload.refresh_token || user[service]?.refreshToken || '',
         expiresAt: Date.now() + Number(tokenPayload.expires_in || 3600) * 1000,
         scope: tokenPayload.scope || ''
       };
       await writeDb(db);
-      return sendHtml(res, 200, '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Gmail conectado</title></head><body><script>location.replace("/app?gmail=connected")</script></body></html>');
+      return sendHtml(res, 200, `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Google conectado</title></head><body><script>location.replace("/app?${service}=connected")</script></body></html>`);
     }
 
     let user = db.auth.users.find(item => item.email === email);
@@ -816,6 +825,21 @@ async function handleApi(req, res, pathname) {
     return res.end();
   }
 
+  if (req.method === 'GET' && pathname === '/api/auth/calendar-url') {
+    if (!isAuthenticated(req)) return send(res, 401, { error: 'Login necessario' });
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) return send(res, 500, { error: 'Google OAuth nao configurado no servidor' });
+    const state = createOauthState({ mode: 'calendar', email: getSessionUser(req) });
+    const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+    url.searchParams.set('client_id', GOOGLE_CLIENT_ID);
+    url.searchParams.set('redirect_uri', `${getBaseUrl(req)}/api/auth/google/callback`);
+    url.searchParams.set('response_type', 'code');
+    url.searchParams.set('scope', 'openid email profile https://www.googleapis.com/auth/calendar.events.readonly');
+    url.searchParams.set('state', state);
+    url.searchParams.set('access_type', 'offline');
+    url.searchParams.set('prompt', 'consent');
+    return send(res, 200, { url: url.toString() });
+  }
+
   if (!isAuthenticated(req)) {
     return send(res, 401, { error: 'Login necessario' });
   }
@@ -838,6 +862,38 @@ async function handleApi(req, res, pathname) {
   const userEmail = getSessionUser(req);
   const currentUser = db.auth.users.find(item => item.email === userEmail);
   const data = getUserData(db, userEmail);
+
+  if (req.method === 'GET' && pathname === '/api/calendar/status') {
+    return send(res, 200, { connected: Boolean(currentUser?.calendar?.refreshToken || currentUser?.calendar?.accessToken), email: currentUser?.calendar?.email || '' });
+  }
+
+  if (req.method === 'GET' && pathname === '/api/calendar/events') {
+    if (!currentUser?.calendar) return send(res, 400, { error: 'Google Agenda nao conectada' });
+    const month = new URL(req.url, getBaseUrl(req)).searchParams.get('month');
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month || '')) return send(res, 400, { error: 'Mes invalido' });
+    const [year, number] = month.split('-').map(Number);
+    const start = new Date(Date.UTC(year, number - 1, 1) - 86400000).toISOString();
+    const end = new Date(Date.UTC(year, number, 1) + 86400000).toISOString();
+    const token = await refreshGoogleAccessToken(currentUser.calendar);
+    const url = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
+    url.searchParams.set('timeMin', start);
+    url.searchParams.set('timeMax', end);
+    url.searchParams.set('singleEvents', 'true');
+    url.searchParams.set('orderBy', 'startTime');
+    url.searchParams.set('maxResults', '250');
+    const events = [];
+    let pageToken = '';
+    do {
+      if (pageToken) url.searchParams.set('pageToken', pageToken);
+      const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) return send(res, response.status, { error: payload.error?.message || 'Nao foi possivel carregar o Google Agenda' });
+      events.push(...(payload.items || []));
+      pageToken = payload.nextPageToken || '';
+    } while (pageToken && events.length < 2500);
+    await writeDb(db);
+    return send(res, 200, { events: events.map(item => ({ id: item.id, nome: item.summary || 'Sem titulo', inicio: item.start?.dateTime || item.start?.date || '', link: item.htmlLink || '' })) });
+  }
 
   if (req.method === 'GET' && pathname === '/api/gmail/status') {
     return send(res, 200, {
